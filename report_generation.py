@@ -1,181 +1,129 @@
 # report_management.py
 import tkinter as tk
-from tkinter import messagebox
-from tkinter import ttk # Para Treeview y Combobox
-from datetime import datetime, timedelta # Para manejar fechas
+from tkinter import ttk, messagebox
 import mysql.connector
-from db_connection import conectar_db
+from datetime import datetime, timedelta
 
-# --- Funciones de Utilidad (para estilizar ventanas) ---
-def setup_window(window, title, geometry="750x550"):
-    window.title(title)
-    window.geometry(geometry)
-    window.configure(bg="#e0f8f7") # Fondo claro
-    window.transient(window.master) # Hace que la ventana sea modal
-    window.grab_set() # Captura todos los eventos
-    return window
+# Asume que db_connection.py está en la misma carpeta
+from db_connection import conectar_db 
 
-def create_input_field(parent, label_text, entry_width=30, show_char=None):
-    frame = ttk.Frame(parent, bg="#e0f8f7")
-    frame.pack(pady=3, fill="x", padx=10)
-    ttk.Label(frame, text=label_text, bg="#e0f8f7", font=("Arial", 10)).pack(side="left", padx=5)
-    entry = ttk.Entry(frame, width=entry_width, font=("Arial", 10), show=show_char)
-    entry.pack(side="right", expand=True, fill="x", padx=5)
-    return entry
+# Función auxiliar para limpiar el frame
+def clear_frame(frame):
+    for widget in frame.winfo_children():
+        widget.destroy()
 
-# --- Función de Generación de Reportes ---
+# --- Funciones de Gestión de Reportes ---
 
-def generar_reporte(id_usuario):
-    win = setup_window(ttk.Toplevel(), "Generar Reporte de Inventario")
+def generar_reporte_internal(parent_frame, id_usuario):
+    clear_frame(parent_frame) # Limpia el frame padre antes de construir la nueva UI
 
-    ttk.Label(win, text="Opciones de Reporte", font=("Arial", 14, "bold"), bg="#e0f8f7").pack(pady=15)
+    # Título
+    ttk.Label(parent_frame, text="Generar Reportes", style='ContentTitle.TLabel').pack(pady=20)
 
-    # Selección del tipo de reporte
-    frame_tipo_reporte = ttk.Frame(win, bg="#e0f8f7")
-    frame_tipo_reporte.pack(pady=5, fill="x", padx=10)
-    ttk.Label(frame_tipo_reporte, text="Tipo de Reporte:", bg="#e0f8f7", font=("Arial", 10)).pack(side="left", padx=5)
-    cb_tipo_reporte = ttk.Combobox(frame_tipo_reporte, values=["Stock mínimo", "Productos Por Vencer"], state="readonly", font=("Arial", 10))
-    cb_tipo_reporte.set("Stock mínimo") # Valor por defecto
-    cb_tipo_reporte.pack(side="right", expand=True, fill="x", padx=5)
+    # Frame para los controles del reporte
+    control_frame = ttk.Frame(parent_frame, style='MainContent.TFrame')
+    control_frame.pack(padx=20, pady=10, fill="x")
 
-    # Campos específicos para cada tipo de reporte
-    frame_stock_minimo = ttk.Frame(win, bg="#e0f8f7")
-    e_cantidad_minima = create_input_field(frame_stock_minimo, "Cantidad Mínima (Stock):")
+    ttk.Label(control_frame, text="Tipo de Reporte:", style='ContentLabel.TLabel').pack(side="left", padx=5)
     
-    frame_productos_vencer = ttk.Frame(win, bg="#e0f8f7")
-    e_dias_vencer = create_input_field(frame_productos_vencer, "Días para Vencer:")
+    reporte_tipos = ["Stock mínimo", "Productos Por Vencer"]
+    tipo_reporte_combobox = ttk.Combobox(control_frame, values=reporte_tipos, state="readonly", font=("Arial", 10), width=30)
+    tipo_reporte_combobox.pack(side="left", padx=5, expand=True, fill="x")
+    tipo_reporte_combobox.set("Stock mínimo") # Valor por defecto
 
-    # Mostrar/ocultar campos según el tipo de reporte seleccionado
-    def on_report_type_selected(event=None):
-        if cb_tipo_reporte.get() == "Stock mínimo":
-            frame_productos_vencer.pack_forget()
-            frame_stock_minimo.pack(pady=5, fill="x", padx=10)
-        elif cb_tipo_reporte.get() == "Productos Por Vencer":
-            frame_stock_minimo.pack_forget()
-            frame_productos_vencer.pack(pady=5, fill="x", padx=10)
+    # Frame para el Treeview (donde se mostrarán los resultados)
+    report_display_frame = ttk.Frame(parent_frame, style='MainContent.TFrame')
+    report_display_frame.pack(padx=20, pady=10, fill="both", expand=True)
+
+    # Configuración del Treeview para mostrar los resultados del reporte
+    columns = ("ID Producto", "Código", "Nombre", "Tipo", "Cantidad", "Fecha Vencimiento", "Precio")
+    report_tree = ttk.Treeview(report_display_frame, columns=columns, show="headings", style='Treeview.Treeview')
+
+    # Definir encabezados de columnas
+    for col in columns:
+        report_tree.heading(col, text=col)
+        report_tree.column(col, anchor="center", width=100) # Ancho por defecto
+
+    # Ajustes de ancho específicos para algunas columnas
+    report_tree.column("ID Producto", width=80)
+    report_tree.column("Código", width=120)
+    report_tree.column("Nombre", width=150)
+    report_tree.column("Fecha Vencimiento", width=120)
+    report_tree.column("Cantidad", width=80)
+    report_tree.column("Precio", width=80)
+
+    report_tree.pack(side="left", fill="both", expand=True)
+
+    # Scrollbar para el Treeview
+    scrollbar = ttk.Scrollbar(report_display_frame, orient="vertical", command=report_tree.yview)
+    scrollbar.pack(side="right", fill="y")
+    report_tree.configure(yscrollcommand=scrollbar.set)
+
+    def generar_y_mostrar_reporte():
+        tipo_seleccionado = tipo_reporte_combobox.get()
         
-        # Asegurarse de que el Treeview se reconfigure al cambiar de opciones
-        # No es estrictamente necesario aquí, pero buena práctica si el contenido del Treeview cambiara drásticamente
-        # antes de generar el reporte.
-
-    cb_tipo_reporte.bind("<<ComboboxSelected>>", on_report_type_selected)
-    on_report_type_selected() # Llamar al inicio para configurar la vista inicial
-
-    # Configuración del Treeview para mostrar resultados del reporte
-    tree_frame = ttk.Frame(win, bg="#e0f8f7")
-    tree_frame.pack(pady=10, fill="both", expand=True, padx=10)
-
-    # Columnas del Treeview (se ajustarán según el tipo de reporte si es necesario)
-    # Por ahora, un conjunto general de columnas para productos
-    report_columns = ("ID", "Código", "Nombre", "Tipo", "Cantidad", "Precio", "Fecha Vencimiento", "Proveedor")
-    tree = ttk.Treeview(tree_frame, columns=report_columns, show="headings", selectmode="browse")
-
-    for col in report_columns:
-        tree.heading(col, text=col, anchor="w")
-        tree.column(col, width=80, anchor="w") # Ancho por defecto
-
-    tree.column("ID", width=40)
-    tree.column("Nombre", width=150)
-    tree.column("Fecha Vencimiento", width=120)
-
-    vsb = ttk.Scrollbar(tree_frame, orient="vertical", command=tree.yview)
-    vsb.pack(side='right', fill='y')
-    hsb = ttk.Scrollbar(tree_frame, orient="horizontal", command=tree.xview)
-    hsb.pack(side='bottom', fill='x')
-    tree.configure(yscrollcommand=vsb.set, xscrollcommand=hsb.set)
-
-    tree.pack(fill="both", expand=True)
-
-    def generar_y_guardar_reporte():
-        for item in tree.get_children():
-            tree.delete(item) # Limpiar resultados anteriores
-
-        reporte_generado = []
-        tipo_reporte_seleccionado = cb_tipo_reporte.get()
-        sql_query = ""
-        report_title = ""
+        if not tipo_seleccionado:
+            messagebox.showwarning("Selección Incompleta", "Por favor, seleccione un tipo de reporte.")
+            return
 
         db = conectar_db()
         if db is None:
             return
-        cursor = db.cursor(dictionary=True)
 
+        cursor = db.cursor(dictionary=True) # Para obtener resultados como diccionarios
         try:
-            if tipo_reporte_seleccionado == "Stock mínimo":
-                try:
-                    cantidad_minima = int(e_cantidad_minima.get())
-                    if cantidad_minima < 0:
-                        messagebox.showwarning("Entrada Inválida", "La cantidad mínima no puede ser negativa.")
-                        return
-                except ValueError:
-                    messagebox.showwarning("Entrada Inválida", "Por favor, ingrese un número entero para la cantidad mínima.")
-                    return
-                
-                report_title = f"Reporte de Stock Mínimo (Cantidad < {cantidad_minima})"
-                sql_query = """
-                SELECT p.id_producto, p.codigo_producto, p.nombre, p.tipo, p.cantidad, p.precio, p.fecha_vencimiento, prov.nombre AS nombre_proveedor
-                FROM producto p
-                JOIN proveedor prov ON p.id_proveedor = prov.id_proveedor
-                WHERE p.cantidad < %s
-                ORDER BY p.cantidad ASC;
-                """
-                cursor.execute(sql_query, (cantidad_minima,))
+            # Limpiar Treeview antes de cargar nuevos datos
+            for item in report_tree.get_children():
+                report_tree.delete(item)
 
-            elif tipo_reporte_seleccionado == "Productos Por Vencer":
-                try:
-                    dias_vencer = int(e_dias_vencer.get())
-                    if dias_vencer < 0:
-                        messagebox.showwarning("Entrada Inválida", "Los días para vencer no pueden ser negativos.")
-                        return
-                except ValueError:
-                    messagebox.showwarning("Entrada Inválida", "Por favor, ingrese un número entero para los días a vencer.")
-                    return
-                
-                fecha_limite = datetime.now().date() + timedelta(days=dias_vencer)
-                report_title = f"Reporte de Productos por Vencer (en los próximos {dias_vencer} días)"
-                sql_query = """
-                SELECT p.id_producto, p.codigo_producto, p.nombre, p.tipo, p.cantidad, p.precio, p.fecha_vencimiento, prov.nombre AS nombre_proveedor
-                FROM producto p
-                JOIN proveedor prov ON p.id_proveedor = prov.id_proveedor
-                WHERE p.fecha_vencimiento <= %s AND p.fecha_vencimiento >= CURDATE()
-                ORDER BY p.fecha_vencimiento ASC;
-                """
-                cursor.execute(sql_query, (fecha_limite,))
+            if tipo_seleccionado == "Stock mínimo":
+                # Definimos un umbral de stock bajo, por ejemplo, 10 unidades
+                stock_minimo_umbral = 10 
+                sql = "SELECT id_producto, codigo_producto, nombre, tipo, cantidad, fecha_vencimiento, precio FROM producto WHERE cantidad <= %s ORDER BY cantidad ASC"
+                cursor.execute(sql, (stock_minimo_umbral,))
+                report_title_display.config(text=f"Reporte de Stock Mínimo (Cantidad <= {stock_minimo_umbral})") # Actualizar título
+            elif tipo_seleccionado == "Productos Por Vencer":
+                # Productos que vencen en los próximos 30 días
+                fecha_limite = datetime.now().date() + timedelta(days=30)
+                sql = "SELECT id_producto, codigo_producto, nombre, tipo, cantidad, fecha_vencimiento, precio FROM producto WHERE fecha_vencimiento <= %s ORDER BY fecha_vencimiento ASC"
+                cursor.execute(sql, (fecha_limite,))
+                report_title_display.config(text=f"Reporte de Productos por Vencer (en los próximos 30 días)") # Actualizar título
             
             resultados = cursor.fetchall()
 
             if not resultados:
-                messagebox.showinfo("Sin Resultados", f"No se encontraron productos para el '{tipo_reporte_seleccionado}'.")
+                messagebox.showinfo("Reporte Vacío", f"No se encontraron productos para el reporte de '{tipo_seleccionado}'.")
+                report_title_display.config(text=f"Reporte de {tipo_seleccionado} (No hay datos)")
                 return
 
             for row in resultados:
-                tree.insert("", "end", values=(
+                report_tree.insert("", "end", values=(
                     row['id_producto'],
                     row['codigo_producto'],
                     row['nombre'],
                     row['tipo'],
                     row['cantidad'],
-                    row['precio'],
-                    row['fecha_vencimiento'], # La fecha ya es un objeto date de Python
-                    row['nombre_proveedor']
+                    row['fecha_vencimiento'], # La fecha ya es un objeto date
+                    f"{row['precio']:.2f}" # Formatear precio a 2 decimales
                 ))
-            
-            # Guardar el evento de generación de reporte en la base de datos
-            fecha_generacion = datetime.now().date()
-            sql_insert_reporte = "INSERT INTO reporte (fecha_generacion, tipo_reporte, id_usuario) VALUES (%s, %s, %s)"
-            cursor.execute(sql_insert_reporte, (fecha_generacion, tipo_reporte_seleccionado, id_usuario))
+
+            # --- Registrar la generación del reporte en la tabla 'reporte' ---
+            sql_registro_reporte = "INSERT INTO reporte (fecha_generacion, tipo_reporte, id_usuario) VALUES (%s, %s, %s)"
+            val_registro_reporte = (datetime.now().date(), tipo_seleccionado, id_usuario)
+            cursor.execute(sql_registro_reporte, val_registro_reporte)
             db.commit()
-            messagebox.showinfo("Reporte Generado", f"{report_title} generado y registrado.")
+            messagebox.showinfo("Reporte Generado", f"El reporte de '{tipo_seleccionado}' ha sido generado y registrado.")
 
         except mysql.connector.Error as err:
-            messagebox.showerror("Error de Base de Datos", f"Ocurrió un error al generar el reporte: {err}")
-            if db.is_connected():
-                db.rollback()
+            messagebox.showerror("Error de Base de Datos", f"Error al generar reporte: {err}")
         finally:
-            if db.is_connected():
+            if db and db.is_connected():
                 cursor.close()
                 db.close()
+    
+    # Título dinámico para el reporte (se actualiza al generar)
+    report_title_display = ttk.Label(parent_frame, text="Detalles del Reporte", style='ContentSubtitle.TLabel')
+    report_title_display.pack(pady=(10, 5))
 
-    ttk.Button(win, text="Generar Reporte", command=generar_y_guardar_reporte,
-              font=("Arial", 10, "bold"), bg="#007bff", fg="white", width=20, cursor="hand2").pack(pady=20)
-    win.mainloop()
+    # Botón para generar el reporte
+    ttk.Button(parent_frame, text="Generar Reporte", command=generar_y_mostrar_reporte, style='Accent.TButton').pack(pady=20)

@@ -50,11 +50,11 @@ def crear_ventana_login():
 
     ttk.Label(contenido_frame, text="Sistema de Inventario", font=("Arial", 14, "bold")).pack(pady=15)
 
-    ttk.Label(contenido_frame, text="Usuario:", font=("Arial", 12)).pack(pady=2)
+    ttk.Label(contenido_frame, text="Username:", font=("Arial", 12)).pack(pady=2)
     entry_usuario = ttk.Entry(contenido_frame, font=("Arial", 12), width=20)
     entry_usuario.pack(pady=2)
 
-    ttk.Label(contenido_frame, text="Contraseña:", font=("Arial", 12)).pack(pady=2)
+    ttk.Label(contenido_frame, text="Password:", font=("Arial", 12)).pack(pady=2)
     entry_contrasena = ttk.Entry(contenido_frame, show="*", font=("Arial", 12), width=20)
     entry_contrasena.pack(pady=2)
 
@@ -88,8 +88,8 @@ def crear_ventana_login():
             nombre_completo = resultado['nombre_completo']
             id_usuario = resultado['id_usuario']
             messagebox.showinfo("Bienvenido", f"¡Bienvenido(a), {nombre_completo}! Rol: {rol}")
-            ventana_login.destroy()
-            main_menu.abrir_menu_principal(rol, id_usuario) 
+            ventana_login.withdraw()
+            main_menu.abrir_menu_principal(rol, id_usuario, ventana_login) 
         else:
             messagebox.showerror("Error de Inicio de Sesión", "Usuario o contraseña incorrectos.")
 
@@ -99,9 +99,9 @@ def crear_ventana_login():
     # Estilo para el botón (si tu tema 'clam' lo soporta bien, si no, puedes probar con otros valores)
     style.map('Accent.TButton',
         foreground=[('pressed', 'white'), ('active', 'white')],
-        background=[('pressed', '!focus', "#8A0505"), ('active', "#490205")],
+        background=[('pressed', '!focus', "#913B02"), ('active', "#200D01")],
         relief=[('pressed', 'sunken'), ('!pressed', 'raised')])
-    style.configure('Accent.TButton', font=("Arial", 12, "bold"), padding=10, background="#ff000d", foreground='white')
+    style.configure('Accent.TButton', font=("Arial", 12, "bold"), padding=10, background="#411902", foreground='white')
 
 
     ventana_login.mainloop()

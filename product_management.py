@@ -1,74 +1,446 @@
 # product_management.py
 import tkinter as tk
-from tkinter import messagebox
-from tkinter import ttk
-from datetime import datetime
-from db_connection import conectar_db # Importamos la función de conexión
+from tkinter import ttk, messagebox
 import mysql.connector
+from datetime import datetime
 
-def registrar_producto():
-    win = ttk.Toplevel()
-    win.title("Registrar Producto")
-    win.geometry("450x600")
-    # No usamos transient con ventana_login directamente aquí, sino que la abrimos desde main.py
+# Asume que db_connection.py está en la misma carpeta
+from db_connection import conectar_db 
 
-    win.configure(bg="#f0f8ff")
-    label_font = ("Arial", 10)
-    entry_font = ("Arial", 10)
-    button_font = ("Arial", 10, "bold")
+# Función auxiliar para limpiar el frame (puede ser útil en cada módulo o importarse si está en un util.py)
+def clear_frame(frame):
+    for widget in frame.winfo_children():
+        widget.destroy()
 
-    ttk.Label(win, text="Código de Producto:", font=label_font, bg="#f0f8ff").pack(pady=5)
-    entry_codigo = ttk.Entry(win, font=entry_font, width=30)
-    entry_codigo.pack(pady=2)
+# --- Funciones de Gestión de Productos ---
 
-    ttk.Label(win, text="Nombre:", font=label_font, bg="#f0f8ff").pack(pady=5)
-    entry_nombre = ttk.Entry(win, font=entry_font, width=30)
-    entry_nombre.pack(pady=2)
+def registrar_producto_internal(parent_frame):
+    clear_frame(parent_frame) # Limpia el frame padre antes de construir la nueva UI
 
-    ttk.Label(win, text="Tipo (Cárnicos/Víveres):", font=label_font, bg="#f0f8ff").pack(pady=5)
-    tipo_options = ["Carnicos", "Viveres"]
-    combo_tipo = ttk.Combobox(win, values=tipo_options, state="readonly", font=entry_font, width=28)
-    combo_tipo.set("Seleccionar")
-    combo_tipo.pack(pady=2)
+    # Configurar estilos para los botones de acción dentro de los formularios
+    style = ttk.Style(parent_frame)
+    style.configure('Action.TButton', font=("Arial", 10, "bold"), padding=8, 
+                    background="#4CAF50", foreground='white', borderwidth=0, relief="flat") # Un verde para "Guardar"
+    style.map('Action.TButton', background=[('active', "#45A049")])
 
-    ttk.Label(win, text="Fecha de Ingreso (YYYY-MM-DD):", font=label_font, bg="#f0f8ff").pack(pady=5)
-    entry_fecha_ingreso = ttk.Entry(win, font=entry_font, width=30)
-    entry_fecha_ingreso.insert(0, datetime.now().strftime("%Y-%m-%d"))
-    entry_fecha_ingreso.pack(pady=2)
+    style.configure('Delete.TButton', font=("Arial", 10, "bold"), padding=8, 
+                    background="#f44336", foreground='white', borderwidth=0, relief="flat") # Un rojo para "Eliminar"
+    style.map('Delete.TButton', background=[('active', "#DA190B")])
 
-    ttk.Label(win, text="Fecha de Vencimiento (YYYY-MM-DD):", font=label_font, bg="#f0f8ff").pack(pady=5)
-    entry_fecha_vencimiento = ttk.Entry(win, font=entry_font, width=30)
-    entry_fecha_vencimiento.pack(pady=2)
+    style.configure('Search.TButton', font=("Arial", 10, "bold"), padding=8, 
+                    background="#2196F3", foreground='white', borderwidth=0, relief="flat") # Un azul para "Buscar"
+    style.map('Search.TButton', background=[('active', "#0B7CDA")])
 
-    ttk.Label(win, text="Precio:", font=label_font, bg="#f0f8ff").pack(pady=5)
-    entry_precio = ttk.Entry(win, font=entry_font, width=30)
-    entry_precio.pack(pady=2)
 
-    ttk.Label(win, text="Cantidad:", font=label_font, bg="#f0f8ff").pack(pady=5)
-    entry_cantidad = ttk.Entry(win, font=entry_font, width=30)
-    entry_cantidad.pack(pady=2)
+    # Título
+    ttk.Label(parent_frame, text="Registrar Nuevo Producto", style='ContentTitle.TLabel').pack(pady=20)
 
-    ttk.Label(win, text="ID Proveedor:", font=label_font, bg="#f0f8ff").pack(pady=5)
-    entry_id_proveedor = ttk.Entry(win, font=entry_font, width=30)
-    entry_id_proveedor.pack(pady=2)
+    # Frame para los campos de entrada para mejor organización
+    input_frame = ttk.Frame(parent_frame, style='MainContent.TFrame')
+    input_frame.pack(padx=20, pady=10, fill="both", expand=True)
+
+    # Usar grid para los campos del formulario para un mejor control del layout
+    input_frame.columnconfigure(0, weight=1)
+    input_frame.columnconfigure(1, weight=3) # Dar más espacio a las entradas
+
+    # Campo: Código de Producto
+    ttk.Label(input_frame, text="Código de Producto:", style='ContentLabel.TLabel').grid(row=0, column=0, sticky="w", pady=5, padx=5)
+    codigo_producto_entry = ttk.Entry(input_frame, font=("Arial", 10), width=30)
+    codigo_producto_entry.grid(row=0, column=1, sticky="ew", pady=5, padx=5)
+
+    # Campo: Nombre
+    ttk.Label(input_frame, text="Nombre:", style='ContentLabel.TLabel').grid(row=1, column=0, sticky="w", pady=5, padx=5)
+    nombre_entry = ttk.Entry(input_frame, font=("Arial", 10), width=30)
+    nombre_entry.grid(row=1, column=1, sticky="ew", pady=5, padx=5)
+
+    # Campo: Tipo (Carnicos, Viveres)
+    ttk.Label(input_frame, text="Tipo:", style='ContentLabel.TLabel').grid(row=2, column=0, sticky="w", pady=5, padx=5)
+    tipo_combobox = ttk.Combobox(input_frame, values=["Carnicos", "Viveres"], state="readonly", font=("Arial", 10), width=28)
+    tipo_combobox.grid(row=2, column=1, sticky="ew", pady=5, padx=5)
+    tipo_combobox.set("Carnicos") # Valor por defecto
+
+    # Campo: Fecha de Ingreso
+    ttk.Label(input_frame, text="Fecha de Ingreso (YYYY-MM-DD):", style='ContentLabel.TLabel').grid(row=3, column=0, sticky="w", pady=5, padx=5)
+    fecha_ingreso_entry = ttk.Entry(input_frame, font=("Arial", 10), width=30)
+    fecha_ingreso_entry.grid(row=3, column=1, sticky="ew", pady=5, padx=5)
+    fecha_ingreso_entry.insert(0, datetime.now().strftime("%Y-%m-%d")) # Fecha actual por defecto
+
+    # Campo: Fecha de Vencimiento
+    ttk.Label(input_frame, text="Fecha de Vencimiento (YYYY-MM-DD):", style='ContentLabel.TLabel').grid(row=4, column=0, sticky="w", pady=5, padx=5)
+    fecha_vencimiento_entry = ttk.Entry(input_frame, font=("Arial", 10), width=30)
+    fecha_vencimiento_entry.grid(row=4, column=1, sticky="ew", pady=5, padx=5)
+
+    # Campo: Precio
+    ttk.Label(input_frame, text="Precio:", style='ContentLabel.TLabel').grid(row=5, column=0, sticky="w", pady=5, padx=5)
+    precio_entry = ttk.Entry(input_frame, font=("Arial", 10), width=30)
+    precio_entry.grid(row=5, column=1, sticky="ew", pady=5, padx=5)
+
+    # Campo: Cantidad
+    ttk.Label(input_frame, text="Cantidad:", style='ContentLabel.TLabel').grid(row=6, column=0, sticky="w", pady=5, padx=5)
+    cantidad_entry = ttk.Entry(input_frame, font=("Arial", 10), width=30)
+    cantidad_entry.grid(row=6, column=1, sticky="ew", pady=5, padx=5)
+
+    # Campo: ID Proveedor (asumiendo que necesitas el ID)
+    ttk.Label(input_frame, text="ID Proveedor:", style='ContentLabel.TLabel').grid(row=7, column=0, sticky="w", pady=5, padx=5)
+    id_proveedor_entry = ttk.Entry(input_frame, font=("Arial", 10), width=30)
+    id_proveedor_entry.grid(row=7, column=1, sticky="ew", pady=5, padx=5)
+
 
     def guardar_producto():
-        codigo_producto = entry_codigo.get()
-        nombre = entry_nombre.get()
-        tipo = combo_tipo.get()
-        fecha_ingreso_str = entry_fecha_ingreso.get()
-        fecha_vencimiento_str = entry_fecha_vencimiento.get()
-        precio_str = entry_precio.get()
-        cantidad_str = entry_cantidad.get()
-        id_proveedor_str = entry_id_proveedor.get()
+        codigo_producto = codigo_producto_entry.get().strip()
+        nombre = nombre_entry.get().strip()
+        tipo = tipo_combobox.get().strip()
+        fecha_ingreso_str = fecha_ingreso_entry.get().strip()
+        fecha_vencimiento_str = fecha_vencimiento_entry.get().strip()
+        precio_str = precio_entry.get().strip()
+        cantidad_str = cantidad_entry.get().strip()
+        id_proveedor_str = id_proveedor_entry.get().strip()
 
-        if not all([codigo_producto, nombre, tipo, fecha_ingreso_str, fecha_vencimiento_str, precio_str, cantidad_str, id_proveedor_str]):
-            messagebox.showwarning("Campos vacíos", "Por favor, complete todos los campos.")
+        # Validación de campos obligatorios
+        missing_fields = []
+        if not codigo_producto:
+            missing_fields.append("Código de Producto")
+        if not nombre:
+            missing_fields.append("Nombre")
+        if not tipo:
+            missing_fields.append("Tipo")
+        if not fecha_ingreso_str:
+            missing_fields.append("Fecha de Ingreso")
+        if not fecha_vencimiento_str:
+            missing_fields.append("Fecha de Vencimiento")
+        if not precio_str:
+            missing_fields.append("Precio")
+        if not cantidad_str:
+            missing_fields.append("Cantidad")
+        if not id_proveedor_str:
+            missing_fields.append("ID Proveedor")
+
+        if missing_fields:
+            messagebox.showwarning("Campos Incompletos", 
+                                   "Los siguientes campos son obligatorios y no pueden estar vacíos:\n\n- " + 
+                                   "\n- ".join(missing_fields))
             return
 
-        if tipo == "Seleccionar":
-            messagebox.showwarning("Tipo de Producto", "Por favor, seleccione un tipo de producto.")
+        try:
+            # Validaciones de tipo de datos
+            fecha_ingreso = datetime.strptime(fecha_ingreso_str, "%Y-%m-%d").date()
+            fecha_vencimiento = datetime.strptime(fecha_vencimiento_str, "%Y-%m-%d").date()
+            precio = float(precio_str)
+            cantidad = int(cantidad_str)
+            id_proveedor = int(id_proveedor_str) 
+
+            if precio <= 0:
+                messagebox.showerror("Error de Valores", "El precio debe ser un número positivo mayor que cero.")
+                return
+            if cantidad < 0: # Cantidad puede ser 0 al inicio, pero no negativa
+                messagebox.showerror("Error de Valores", "La cantidad no puede ser un número negativo.")
+                return
+            if fecha_vencimiento < fecha_ingreso:
+                messagebox.showerror("Error de Fechas", "La fecha de vencimiento no puede ser anterior a la fecha de ingreso.")
+                return
+
+
+        except ValueError as e:
+            messagebox.showerror("Error de Formato", f"Verifique el formato de los datos:\n\n- Fechas: YYYY-MM-DD\n- Precio: Numérico (ej. 10.50)\n- Cantidad: Número entero\n- ID Proveedor: Número entero\n\nDetalle del error: {e}")
             return
+
+        db = conectar_db()
+        if db is None:
+            return
+
+        cursor = db.cursor()
+        try:
+            sql = "INSERT INTO producto (codigo_producto, nombre, tipo, fecha_ingreso, fecha_vencimiento, precio, cantidad, id_proveedor) VALUES (%s, %s, %s, %s, %s, %s, %s, %s)"
+            val = (codigo_producto, nombre, tipo, fecha_ingreso, fecha_vencimiento, precio, cantidad, id_proveedor)
+            cursor.execute(sql, val)
+            db.commit()
+            messagebox.showinfo("Éxito", "Producto registrado correctamente.")
+            
+            # Limpiar los campos después de registrar
+            codigo_producto_entry.delete(0, tk.END)
+            nombre_entry.delete(0, tk.END)
+            tipo_combobox.set("Carnicos") # Resetear a valor por defecto
+            fecha_ingreso_entry.delete(0, tk.END)
+            fecha_ingreso_entry.insert(0, datetime.now().strftime("%Y-%m-%d"))
+            fecha_vencimiento_entry.delete(0, tk.END)
+            precio_entry.delete(0, tk.END)
+            cantidad_entry.delete(0, tk.END)
+            id_proveedor_entry.delete(0, tk.END)
+
+        except mysql.connector.Error as err:
+            if err.errno == 1062: # Código de error para entrada duplicada (UNIQUE constraint)
+                messagebox.showerror("Error de Registro", "El código de producto ya existe. Por favor, use un código diferente.")
+            elif err.errno == 1452: # Código de error para FK constraint fail (Proveedor no existe)
+                 messagebox.showerror("Error de Registro", "El ID de Proveedor no existe o es inválido. Por favor, asegúrese de que el proveedor exista.")
+            else:
+                messagebox.showerror("Error de Base de Datos", f"Error al registrar producto: {err}")
+        finally:
+            if db and db.is_connected():
+                cursor.close()
+                db.close()
+
+    # Botón de Guardar
+    ttk.Button(parent_frame, text="Guardar Producto", command=guardar_producto, style='Action.TButton').pack(pady=20)
+
+
+def consultar_producto_internal(parent_frame):
+    clear_frame(parent_frame)
+    style = ttk.Style(parent_frame)
+    style.configure('Action.TButton', font=("Arial", 10, "bold"), padding=8, 
+                    background="#4CAF50", foreground='white', borderwidth=0, relief="flat") 
+    style.map('Action.TButton', background=[('active', "#45A049")])
+    style.configure('Search.TButton', font=("Arial", 10, "bold"), padding=8, 
+                    background="#2196F3", foreground='white', borderwidth=0, relief="flat") 
+    style.map('Search.TButton', background=[('active', "#0B7CDA")])
+
+
+    ttk.Label(parent_frame, text="Consultar Producto Específico", style='ContentTitle.TLabel').pack(pady=20)
+
+    search_frame = ttk.Frame(parent_frame, style='MainContent.TFrame')
+    search_frame.pack(padx=20, pady=10, fill="x")
+    search_frame.columnconfigure(0, weight=1)
+    search_frame.columnconfigure(1, weight=3)
+    search_frame.columnconfigure(2, weight=1)
+
+    ttk.Label(search_frame, text="Código de Producto:", style='ContentLabel.TLabel').grid(row=0, column=0, sticky="w", pady=5, padx=5)
+    codigo_search_entry = ttk.Entry(search_frame, font=("Arial", 10), width=30)
+    codigo_search_entry.grid(row=0, column=1, sticky="ew", pady=5, padx=5)
+
+    details_frame = ttk.LabelFrame(parent_frame, text="Detalles del Producto", style='MainContent.TFrame')
+    details_frame.pack(padx=20, pady=10, fill="both", expand=True)
+    details_frame.columnconfigure(0, weight=1)
+    details_frame.columnconfigure(1, weight=3)
+
+    # Variables para mostrar los detalles del producto
+    id_producto_var = tk.StringVar()
+    nombre_var = tk.StringVar()
+    tipo_var = tk.StringVar()
+    fecha_ingreso_var = tk.StringVar()
+    fecha_vencimiento_var = tk.StringVar()
+    precio_var = tk.StringVar()
+    cantidad_var = tk.StringVar()
+    id_proveedor_var = tk.StringVar()
+
+    ttk.Label(details_frame, text="ID:", style='ContentLabel.TLabel').grid(row=0, column=0, sticky="w", pady=2, padx=5)
+    ttk.Label(details_frame, textvariable=id_producto_var, style='ContentLabel.TLabel').grid(row=0, column=1, sticky="w", pady=2, padx=5)
+    ttk.Label(details_frame, text="Nombre:", style='ContentLabel.TLabel').grid(row=1, column=0, sticky="w", pady=2, padx=5)
+    ttk.Label(details_frame, textvariable=nombre_var, style='ContentLabel.TLabel').grid(row=1, column=1, sticky="w", pady=2, padx=5)
+    ttk.Label(details_frame, text="Tipo:", style='ContentLabel.TLabel').grid(row=2, column=0, sticky="w", pady=2, padx=5)
+    ttk.Label(details_frame, textvariable=tipo_var, style='ContentLabel.TLabel').grid(row=2, column=1, sticky="w", pady=2, padx=5)
+    ttk.Label(details_frame, text="Fecha Ingreso:", style='ContentLabel.TLabel').grid(row=3, column=0, sticky="w", pady=2, padx=5)
+    ttk.Label(details_frame, textvariable=fecha_ingreso_var, style='ContentLabel.TLabel').grid(row=3, column=1, sticky="w", pady=2, padx=5)
+    ttk.Label(details_frame, text="Fecha Vencimiento:", style='ContentLabel.TLabel').grid(row=4, column=0, sticky="w", pady=2, padx=5)
+    ttk.Label(details_frame, textvariable=fecha_vencimiento_var, style='ContentLabel.TLabel').grid(row=4, column=1, sticky="w", pady=2, padx=5)
+    ttk.Label(details_frame, text="Precio:", style='ContentLabel.TLabel').grid(row=5, column=0, sticky="w", pady=2, padx=5)
+    ttk.Label(details_frame, textvariable=precio_var, style='ContentLabel.TLabel').grid(row=5, column=1, sticky="w", pady=2, padx=5)
+    ttk.Label(details_frame, text="Cantidad:", style='ContentLabel.TLabel').grid(row=6, column=0, sticky="w", pady=2, padx=5)
+    ttk.Label(details_frame, textvariable=cantidad_var, style='ContentLabel.TLabel').grid(row=6, column=1, sticky="w", pady=2, padx=5)
+    ttk.Label(details_frame, text="ID Proveedor:", style='ContentLabel.TLabel').grid(row=7, column=0, sticky="w", pady=2, padx=5)
+    ttk.Label(details_frame, textvariable=id_proveedor_var, style='ContentLabel.TLabel').grid(row=7, column=1, sticky="w", pady=2, padx=5)
+
+    def buscar_producto():
+        codigo_producto = codigo_search_entry.get().strip()
+        if not codigo_producto:
+            messagebox.showwarning("Campo Vacío", "Por favor, ingrese el código del producto a buscar.")
+            return
+
+        db = conectar_db()
+        if db is None:
+            return
+
+        cursor = db.cursor(dictionary=True)
+        try:
+            sql = "SELECT * FROM producto WHERE codigo_producto = %s"
+            cursor.execute(sql, (codigo_producto,))
+            producto = cursor.fetchone()
+
+            if producto:
+                id_producto_var.set(producto['id_producto'])
+                nombre_var.set(producto['nombre'])
+                tipo_var.set(producto['tipo'])
+                fecha_ingreso_var.set(producto['fecha_ingreso'])
+                fecha_vencimiento_var.set(producto['fecha_vencimiento'])
+                precio_var.set(f"{producto['precio']:.2f}")
+                cantidad_var.set(producto['cantidad'])
+                id_proveedor_var.set(producto['id_proveedor'] if producto['id_proveedor'] else "N/A")
+                messagebox.showinfo("Producto Encontrado", f"Producto '{producto['nombre']}' encontrado.")
+            else:
+                id_producto_var.set("")
+                nombre_var.set("")
+                tipo_var.set("")
+                fecha_ingreso_var.set("")
+                fecha_vencimiento_var.set("")
+                precio_var.set("")
+                cantidad_var.set("")
+                id_proveedor_var.set("")
+                messagebox.showwarning("No Encontrado", f"No se encontró ningún producto con el código '{codigo_producto}'.")
+        except mysql.connector.Error as err:
+            messagebox.showerror("Error de Base de Datos", f"Error al buscar producto: {err}")
+        finally:
+            if db and db.is_connected():
+                cursor.close()
+                db.close()
+
+    ttk.Button(search_frame, text="Buscar", command=buscar_producto, style='Search.TButton').grid(row=0, column=2, sticky="ew", pady=5, padx=5)
+
+
+def editar_producto_internal(parent_frame):
+    clear_frame(parent_frame)
+    style = ttk.Style(parent_frame)
+    style.configure('Action.TButton', font=("Arial", 10, "bold"), padding=8, 
+                    background="#4CAF50", foreground='white', borderwidth=0, relief="flat") 
+    style.map('Action.TButton', background=[('active', "#45A049")])
+    style.configure('Search.TButton', font=("Arial", 10, "bold"), padding=8, 
+                    background="#2196F3", foreground='white', borderwidth=0, relief="flat") 
+    style.map('Search.TButton', background=[('active', "#0B7CDA")])
+
+
+    ttk.Label(parent_frame, text="Editar Producto", style='ContentTitle.TLabel').pack(pady=20)
+
+    search_edit_frame = ttk.Frame(parent_frame, style='MainContent.TFrame')
+    search_edit_frame.pack(padx=20, pady=10, fill="x")
+    search_edit_frame.columnconfigure(0, weight=1)
+    search_edit_frame.columnconfigure(1, weight=3)
+    search_edit_frame.columnconfigure(2, weight=1)
+
+    ttk.Label(search_edit_frame, text="Código de Producto a Editar:", style='ContentLabel.TLabel').grid(row=0, column=0, sticky="w", pady=5, padx=5)
+    codigo_edit_search_entry = ttk.Entry(search_edit_frame, font=("Arial", 10), width=30)
+    codigo_edit_search_entry.grid(row=0, column=1, sticky="ew", pady=5, padx=5)
+
+    # Frame para los campos de edición, inicialmente oculto o vacío
+    edit_form_frame = ttk.Frame(parent_frame, style='MainContent.TFrame')
+    edit_form_frame.pack(padx=20, pady=10, fill="both", expand=True)
+    edit_form_frame.columnconfigure(0, weight=1)
+    edit_form_frame.columnconfigure(1, weight=3)
+
+    # Campos de entrada para la edición (variables asociadas)
+    nombre_edit_entry = ttk.Entry(edit_form_frame, font=("Arial", 10), width=30)
+    tipo_edit_combobox = ttk.Combobox(edit_form_frame, values=["Carnicos", "Viveres"], state="readonly", font=("Arial", 10), width=28)
+    fecha_ingreso_edit_entry = ttk.Entry(edit_form_frame, font=("Arial", 10), width=30)
+    fecha_vencimiento_edit_entry = ttk.Entry(edit_form_frame, font=("Arial", 10), width=30)
+    precio_edit_entry = ttk.Entry(edit_form_frame, font=("Arial", 10), width=30)
+    cantidad_edit_entry = ttk.Entry(edit_form_frame, font=("Arial", 10), width=30)
+    id_proveedor_edit_entry = ttk.Entry(edit_form_frame, font=("Arial", 10), width=30)
+    
+    # Label para el ID de producto que no se edita, pero se muestra
+    ttk.Label(edit_form_frame, text="ID de Producto:", style='ContentLabel.TLabel').grid(row=0, column=0, sticky="w", pady=5, padx=5)
+    id_producto_display_label = ttk.Label(edit_form_frame, text="", style='ContentLabel.TLabel')
+    id_producto_display_label.grid(row=0, column=1, sticky="w", pady=5, padx=5)
+
+    ttk.Label(edit_form_frame, text="Nombre:", style='ContentLabel.TLabel').grid(row=1, column=0, sticky="w", pady=5, padx=5)
+    nombre_edit_entry.grid(row=1, column=1, sticky="ew", pady=5, padx=5)
+    ttk.Label(edit_form_frame, text="Tipo:", style='ContentLabel.TLabel').grid(row=2, column=0, sticky="w", pady=5, padx=5)
+    tipo_edit_combobox.grid(row=2, column=1, sticky="ew", pady=5, padx=5)
+    ttk.Label(edit_form_frame, text="Fecha Ingreso (YYYY-MM-DD):", style='ContentLabel.TLabel').grid(row=3, column=0, sticky="w", pady=5, padx=5)
+    fecha_ingreso_edit_entry.grid(row=3, column=1, sticky="ew", pady=5, padx=5)
+    ttk.Label(edit_form_frame, text="Fecha Vencimiento (YYYY-MM-DD):", style='ContentLabel.TLabel').grid(row=4, column=0, sticky="w", pady=5, padx=5)
+    fecha_vencimiento_edit_entry.grid(row=4, column=1, sticky="ew", pady=5, padx=5)
+    ttk.Label(edit_form_frame, text="Precio:", style='ContentLabel.TLabel').grid(row=5, column=0, sticky="w", pady=5, padx=5)
+    precio_edit_entry.grid(row=5, column=1, sticky="ew", pady=5, padx=5)
+    ttk.Label(edit_form_frame, text="Cantidad:", style='ContentLabel.TLabel').grid(row=6, column=0, sticky="w", pady=5, padx=5)
+    cantidad_edit_entry.grid(row=6, column=1, sticky="ew", pady=5, padx=5)
+    ttk.Label(edit_form_frame, text="ID Proveedor:", style='ContentLabel.TLabel').grid(row=7, column=0, sticky="w", pady=5, padx=5)
+    id_proveedor_edit_entry.grid(row=7, column=1, sticky="ew", pady=5, padx=5)
+
+    btn_actualizar = ttk.Button(edit_form_frame, text="Actualizar Producto", style='Action.TButton')
+    btn_actualizar.grid(row=8, column=0, columnspan=2, pady=15)
+    btn_actualizar.grid_remove() # Ocultar inicialmente
+
+    current_product_id = None # Para almacenar el ID del producto que se está editando
+
+    def cargar_datos_producto():
+        nonlocal current_product_id
+        codigo_producto = codigo_edit_search_entry.get().strip()
+        if not codigo_producto:
+            messagebox.showwarning("Campo Vacío", "Por favor, ingrese el código del producto a editar.")
+            return
+
+        db = conectar_db()
+        if db is None:
+            return
+
+        cursor = db.cursor(dictionary=True)
+        try:
+            sql = "SELECT * FROM producto WHERE codigo_producto = %s"
+            cursor.execute(sql, (codigo_producto,))
+            producto = cursor.fetchone()
+
+            if producto:
+                current_product_id = producto['id_producto']
+                id_producto_display_label.config(text=producto['id_producto'])
+                nombre_edit_entry.delete(0, tk.END)
+                nombre_edit_entry.insert(0, producto['nombre'])
+                tipo_edit_combobox.set(producto['tipo'])
+                fecha_ingreso_edit_entry.delete(0, tk.END)
+                fecha_ingreso_edit_entry.insert(0, producto['fecha_ingreso'])
+                fecha_vencimiento_edit_entry.delete(0, tk.END)
+                fecha_vencimiento_edit_entry.insert(0, producto['fecha_vencimiento'])
+                precio_edit_entry.delete(0, tk.END)
+                precio_edit_entry.insert(0, producto['precio'])
+                cantidad_edit_entry.delete(0, tk.END)
+                cantidad_edit_entry.insert(0, producto['cantidad'])
+                id_proveedor_edit_entry.delete(0, tk.END)
+                id_proveedor_edit_entry.insert(0, producto['id_proveedor'] if producto['id_proveedor'] else "")
+                
+                btn_actualizar.grid() # Mostrar el botón de actualizar
+                edit_form_frame.pack(padx=20, pady=10, fill="both", expand=True) # Asegurarse de que el frame de edición esté visible
+                messagebox.showinfo("Producto Encontrado", f"Datos del producto '{producto['nombre']}' cargados para edición.")
+            else:
+                messagebox.showwarning("No Encontrado", f"No se encontró ningún producto con el código '{codigo_producto}'.")
+                # Limpiar y ocultar campos si no se encuentra
+                id_producto_display_label.config(text="")
+                nombre_edit_entry.delete(0, tk.END)
+                tipo_edit_combobox.set("Carnicos")
+                fecha_ingreso_edit_entry.delete(0, tk.END)
+                fecha_vencimiento_edit_entry.delete(0, tk.END)
+                precio_edit_entry.delete(0, tk.END)
+                cantidad_edit_entry.delete(0, tk.END)
+                id_proveedor_edit_entry.delete(0, tk.END)
+                btn_actualizar.grid_remove() # Ocultar el botón de actualizar
+                current_product_id = None
+        except mysql.connector.Error as err:
+            messagebox.showerror("Error de Base de Datos", f"Error al cargar producto para edición: {err}")
+        finally:
+            if db and db.is_connected():
+                cursor.close()
+                db.close()
+
+    def actualizar_producto():
+        if current_product_id is None:
+            messagebox.showwarning("Advertencia", "No hay producto cargado para actualizar.")
+            return
+
+        nombre = nombre_edit_entry.get().strip()
+        tipo = tipo_edit_combobox.get().strip()
+        fecha_ingreso_str = fecha_ingreso_edit_entry.get().strip()
+        fecha_vencimiento_str = fecha_vencimiento_edit_entry.get().strip()
+        precio_str = precio_edit_entry.get().strip()
+        cantidad_str = cantidad_edit_entry.get().strip()
+        id_proveedor_str = id_proveedor_edit_entry.get().strip()
+
+        # Validación de campos obligatorios
+        missing_fields = []
+        if not nombre:
+            missing_fields.append("Nombre")
+        if not tipo:
+            missing_fields.append("Tipo")
+        if not fecha_ingreso_str:
+            missing_fields.append("Fecha de Ingreso")
+        if not fecha_vencimiento_str:
+            missing_fields.append("Fecha de Vencimiento")
+        if not precio_str:
+            missing_fields.append("Precio")
+        if not cantidad_str:
+            missing_fields.append("Cantidad")
+        if not id_proveedor_str:
+            missing_fields.append("ID Proveedor")
+
+        if missing_fields:
+            messagebox.showwarning("Campos Incompletos", 
+                                   "Los siguientes campos son obligatorios y no pueden estar vacíos:\n\n- " + 
+                                   "\n- ".join(missing_fields))
+            return
+
 
         try:
             fecha_ingreso = datetime.strptime(fecha_ingreso_str, "%Y-%m-%d").date()
@@ -76,8 +448,19 @@ def registrar_producto():
             precio = float(precio_str)
             cantidad = int(cantidad_str)
             id_proveedor = int(id_proveedor_str)
-        except ValueError:
-            messagebox.showerror("Error de Formato", "Verifique que las fechas estén en formato YYYY-MM-DD, y que precio/cantidad/ID Proveedor sean números válidos.")
+
+            if precio <= 0:
+                messagebox.showerror("Error de Valores", "El precio debe ser un número positivo mayor que cero.")
+                return
+            if cantidad < 0:
+                messagebox.showerror("Error de Valores", "La cantidad no puede ser un número negativo.")
+                return
+            if fecha_vencimiento < fecha_ingreso:
+                messagebox.showerror("Error de Fechas", "La fecha de vencimiento no puede ser anterior a la fecha de ingreso.")
+                return
+
+        except ValueError as e:
+            messagebox.showerror("Error de Formato", f"Verifique el formato de los datos:\n\n- Fechas: YYYY-MM-DD\n- Precio: Numérico (ej. 10.50)\n- Cantidad: Número entero\n- ID Proveedor: Número entero\n\nDetalle del error: {e}")
             return
 
         db = conectar_db()
@@ -86,384 +469,115 @@ def registrar_producto():
 
         cursor = db.cursor()
         try:
-            cursor.execute("SELECT id_proveedor FROM proveedor WHERE id_proveedor = %s", (id_proveedor,))
-            if cursor.fetchone() is None:
-                messagebox.showerror("Error de Proveedor", "El ID de Proveedor ingresado no existe.")
-                return
-
             sql = """
-            INSERT INTO producto (codigo_producto, nombre, tipo, fecha_ingreso, fecha_vencimiento, precio, cantidad, id_proveedor)
-            VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+                UPDATE producto 
+                SET nombre = %s, tipo = %s, fecha_ingreso = %s, fecha_vencimiento = %s, 
+                    precio = %s, cantidad = %s, id_proveedor = %s
+                WHERE id_producto = %s
             """
-            cursor.execute(sql, (codigo_producto, nombre, tipo, fecha_ingreso, fecha_vencimiento, precio, cantidad, id_proveedor))
+            val = (nombre, tipo, fecha_ingreso, fecha_vencimiento, precio, cantidad, id_proveedor, current_product_id)
+            cursor.execute(sql, val)
             db.commit()
-            messagebox.showinfo("Éxito", "Producto registrado correctamente.")
-            win.destroy()
-        except mysql.connector.IntegrityError as err:
-            if "Duplicate entry" in str(err) and "for key 'producto.codigo_producto'" in str(err):
-                messagebox.showerror("Error de Registro", "Ya existe un producto con este código de producto.")
+            if cursor.rowcount > 0:
+                messagebox.showinfo("Éxito", "Producto actualizado correctamente.")
             else:
-                messagebox.showerror("Error de Base de Datos", f"Ocurrió un error al registrar el producto: {err}")
+                messagebox.showwarning("Advertencia", "No se realizó ninguna actualización (los datos eran los mismos o el producto no existe).")
         except mysql.connector.Error as err:
-            messagebox.showerror("Error de Base de Datos", f"Ocurrió un error al registrar el producto: {err}")
+            if err.errno == 1452: # Código de error para FK constraint fail (Proveedor no existe)
+                 messagebox.showerror("Error de Actualización", "El ID de Proveedor no existe o es inválido. Por favor, asegúrese de que el proveedor exista.")
+            else:
+                messagebox.showerror("Error de Base de Datos", f"Error al actualizar producto: {err}")
         finally:
-            if 'db' in locals() and db.is_connected():
+            if db and db.is_connected():
+                cursor.close()
+                db.close()
+        
+        # Después de actualizar, puedes recargar los datos o limpiar el formulario
+        codigo_edit_search_entry.delete(0, tk.END)
+        id_producto_display_label.config(text="")
+        nombre_edit_entry.delete(0, tk.END)
+        tipo_edit_combobox.set("Carnicos")
+        fecha_ingreso_edit_entry.delete(0, tk.END)
+        fecha_vencimiento_edit_entry.delete(0, tk.END)
+        precio_edit_entry.delete(0, tk.END)
+        cantidad_edit_entry.delete(0, tk.END)
+        id_proveedor_edit_entry.delete(0, tk.END)
+        btn_actualizar.grid_remove()
+        current_product_id = None
+
+
+    ttk.Button(search_edit_frame, text="Cargar Producto", command=cargar_datos_producto, style='Search.TButton').grid(row=0, column=2, sticky="ew", pady=5, padx=5)
+    btn_actualizar.config(command=actualizar_producto) # Asignar la función al botón
+
+
+def eliminar_producto_internal(parent_frame):
+    clear_frame(parent_frame)
+    style = ttk.Style(parent_frame)
+    style.configure('Delete.TButton', font=("Arial", 10, "bold"), padding=8, 
+                    background="#f44336", foreground='white', borderwidth=0, relief="flat") 
+    style.map('Delete.TButton', background=[('active', "#DA190B")])
+    style.configure('Search.TButton', font=("Arial", 10, "bold"), padding=8, 
+                    background="#2196F3", foreground='white', borderwidth=0, relief="flat") 
+    style.map('Search.TButton', background=[('active', "#0B7CDA")])
+
+
+    ttk.Label(parent_frame, text="Eliminar Producto", style='ContentTitle.TLabel').pack(pady=20)
+
+    delete_frame = ttk.Frame(parent_frame, style='MainContent.TFrame')
+    delete_frame.pack(padx=20, pady=10, fill="x")
+    delete_frame.columnconfigure(0, weight=1)
+    delete_frame.columnconfigure(1, weight=3)
+    delete_frame.columnconfigure(2, weight=1)
+
+    ttk.Label(delete_frame, text="Código de Producto a Eliminar:", style='ContentLabel.TLabel').grid(row=0, column=0, sticky="w", pady=5, padx=5)
+    codigo_delete_entry = ttk.Entry(delete_frame, font=("Arial", 10), width=30)
+    codigo_delete_entry.grid(row=0, column=1, sticky="ew", pady=5, padx=5)
+
+    def eliminar_producto():
+        codigo_producto = codigo_delete_entry.get().strip()
+        if not codigo_producto:
+            messagebox.showwarning("Campo Vacío", "Por favor, ingrese el código del producto a eliminar.")
+            return
+
+        confirm = messagebox.askyesno("Confirmar Eliminación", 
+                                      f"¿Está seguro de que desea eliminar el producto con código '{codigo_producto}'?\nEsta acción es irreversible.")
+        if not confirm:
+            return
+
+        db = conectar_db()
+        if db is None:
+            return
+
+        cursor = db.cursor()
+        try:
+            sql = "DELETE FROM producto WHERE codigo_producto = %s"
+            cursor.execute(sql, (codigo_producto,))
+            db.commit()
+
+            if cursor.rowcount > 0:
+                messagebox.showinfo("Éxito", f"Producto con código '{codigo_producto}' eliminado correctamente.")
+                codigo_delete_entry.delete(0, tk.END) # Limpiar el campo
+            else:
+                messagebox.showwarning("No Encontrado", f"No se encontró ningún producto con el código '{codigo_producto}'.")
+        except mysql.connector.Error as err:
+            messagebox.showerror("Error de Base de Datos", f"Error al eliminar producto: {err}")
+        finally:
+            if db and db.is_connected():
                 cursor.close()
                 db.close()
 
-    tk.Button(win, text="Guardar Producto", command=guardar_producto,
-              font=button_font, bg="#28a745", fg="white", width=20, cursor="hand2").pack(pady=15)
-    win.mainloop()
+    ttk.Button(delete_frame, text="Eliminar Producto", command=eliminar_producto, style='Delete.TButton').grid(row=0, column=2, sticky="ew", pady=5, padx=5)
 
-def consultar_producto():
-    """Abre una ventana para consultar un producto específico por ID o código."""
-    win = tk.Toplevel()
-    win.title("Consultar Producto Específico")
-    win.geometry("600x400")
-    win.configure(bg="#f0f8ff")
 
-    tk.Label(win, text="Buscar Producto (ID o Código):", bg="#f0f8ff").pack(pady=10)
-    search_entry = tk.Entry(win, width=40)
-    search_entry.pack(pady=5)
-
-    tree = ttk.Treeview(win, columns=("ID", "Código", "Nombre", "Tipo", "Ingreso", "Vencimiento", "Precio", "Cantidad", "Proveedor ID"), show="headings")
-    tree.heading("ID", text="ID")
-    tree.heading("Código", text="Código")
-    tree.heading("Nombre", text="Nombre")
-    tree.heading("Tipo", text="Tipo")
-    tree.heading("Ingreso", text="F. Ingreso")
-    tree.heading("Vencimiento", text="F. Venc.")
-    tree.heading("Precio", text="Precio")
-    tree.heading("Cantidad", text="Cantidad")
-    tree.heading("Proveedor ID", text="ID Prov.")
-
-    tree.column("ID", width=50)
-    tree.column("Código", width=90)
-    tree.column("Nombre", width=120)
-    tree.column("Tipo", width=80)
-    tree.column("Ingreso", width=90)
-    tree.column("Vencimiento", width=90)
-    tree.column("Precio", width=70)
-    tree.column("Cantidad", width=70)
-    tree.column("Proveedor ID", width=70)
+    clear_frame(parent_frame)
+    ttk.Label(parent_frame, text="Consultar Inventario General", style='ContentTitle.TLabel').pack(pady=20)
     
-    tree.pack(fill="both", expand=True, padx=10, pady=10)
-
-    def perform_search():
-        for item in tree.get_children():
-            tree.delete(item) # Limpiar resultados anteriores
-
-        search_term = search_entry.get().strip()
-        if not search_term:
-            messagebox.showwarning("Campo Vacío", "Por favor, ingrese un ID o código de producto para buscar.")
-            return
-
-        db = conectar_db()
-        if db is None:
-            return
-
-        cursor = db.cursor(dictionary=True)
-        try:
-            # Intentar buscar por id_producto (numérico)
-            try:
-                product_id = int(search_term)
-                sql = "SELECT * FROM producto WHERE id_producto = %s"
-                cursor.execute(sql, (product_id,))
-            except ValueError:
-                # Si no es un número, intentar buscar por codigo_producto (VARCHAR)
-                sql = "SELECT * FROM producto WHERE codigo_producto = %s"
-                cursor.execute(sql, (search_term,))
-            
-            producto = cursor.fetchone()
-
-            if producto:
-                tree.insert("", tk.END, values=(
-                    producto['id_producto'],
-                    producto['codigo_producto'],
-                    producto['nombre'],
-                    producto['tipo'],
-                    producto['fecha_ingreso'],
-                    producto['fecha_vencimiento'],
-                    producto['precio'],
-                    producto['cantidad'],
-                    producto['id_proveedor']
-                ))
-            else:
-                messagebox.showinfo("No Encontrado", f"No se encontró ningún producto con ID o Código: {search_term}")
-        except mysql.connector.Error as err:
-            messagebox.showerror("Error de Base de Datos", f"Ocurrió un error al consultar el producto: {err}")
-        finally:
-            if db and db.is_connected():
-                cursor.close()
-                db.close()
-
-    tk.Button(win, text="Buscar", command=perform_search).pack(pady=10)
-    win.mainloop()
-
-def eliminar_producto():
-    """Abre una ventana para eliminar un producto por ID o código."""
-    win = tk.Toplevel()
-    win.title("Eliminar Producto")
-    win.geometry("400x200")
-    win.configure(bg="#f0f8ff")
-
-    tk.Label(win, text="Ingrese ID o Código del Producto a Eliminar:", bg="#f0f8ff").pack(pady=15)
-    entry_eliminar = tk.Entry(win, width=30)
-    entry_eliminar.pack(pady=5)
-
-    def confirmar_eliminar():
-        search_term = entry_eliminar.get().strip()
-        if not search_term:
-            messagebox.showwarning("Campo Vacío", "Por favor, ingrese un ID o código de producto.")
-            return
-
-        confirm = messagebox.askyesno("Confirmar Eliminación", f"¿Está seguro de que desea eliminar el producto con ID/Código: {search_term}?\nEsta acción es irreversible.")
-        
-        if confirm:
-            db = conectar_db()
-            if db is None:
-                return
-
-            cursor = db.cursor()
-            try:
-                rows_affected = 0
-                # Intentar eliminar por id_producto (numérico)
-                try:
-                    product_id = int(search_term)
-                    sql = "DELETE FROM producto WHERE id_producto = %s"
-                    cursor.execute(sql, (product_id,))
-                    rows_affected = cursor.rowcount
-                except ValueError:
-                    # Si no es un número, intentar eliminar por codigo_producto (VARCHAR)
-                    sql = "DELETE FROM producto WHERE codigo_producto = %s"
-                    cursor.execute(sql, (search_term,))
-                    rows_affected = cursor.rowcount
-
-                if rows_affected > 0:
-                    db.commit()
-                    messagebox.showinfo("Éxito", "Producto eliminado correctamente.")
-                    win.destroy()
-                else:
-                    messagebox.showerror("Error de Eliminación", f"No se encontró ningún producto con ID o Código: {search_term} para eliminar.")
-            except mysql.connector.Error as err:
-                # Capturar error de clave foránea si el producto está en movimientos
-                if err.errno == 1451: # Foreign key constraint fails
-                    messagebox.showerror("Error de Base de Datos", "No se puede eliminar el producto porque está asociado a movimientos existentes. Elimine los movimientos primero.")
-                else:
-                    messagebox.showerror("Error de Base de Datos", f"Ocurrió un error al eliminar el producto: {err}")
-            finally:
-                if db and db.is_connected():
-                    cursor.close()
-                    db.close()
-
-    tk.Button(win, text="Eliminar Producto", command=confirmar_eliminar,
-              bg="#dc3545", fg="white", font=("Arial", 10, "bold"), width=20).pack(pady=15)
-    win.mainloop()
-
-
-def editar_producto():
-    """Abre una ventana para buscar un producto y luego editar sus detalles."""
-    win = tk.Toplevel()
-    win.title("Editar Producto")
-    win.geometry("500x300")
-    win.configure(bg="#f0f8ff")
-
-    tk.Label(win, text="Ingrese ID o Código del Producto a Editar:", bg="#f0f8ff").pack(pady=15)
-    search_entry = tk.Entry(win, width=30)
-    search_entry.pack(pady=5)
-
-    product_data = {} # Usaremos este diccionario para guardar los datos del producto a editar
-
-    def cargar_datos_producto():
-        search_term = search_entry.get().strip()
-        if not search_term:
-            messagebox.showwarning("Campo Vacío", "Por favor, ingrese un ID o código de producto.")
-            return
-
-        db = conectar_db()
-        if db is None:
-            return
-
-        cursor = db.cursor(dictionary=True)
-        try:
-            try:
-                product_id = int(search_term)
-                sql = "SELECT * FROM producto WHERE id_producto = %s"
-                cursor.execute(sql, (product_id,))
-            except ValueError:
-                sql = "SELECT * FROM producto WHERE codigo_producto = %s"
-                cursor.execute(sql, (search_term,))
-            
-            producto = cursor.fetchone()
-
-            if producto:
-                product_data.clear() # Limpiar datos anteriores
-                product_data.update(producto) # Guardar los datos del producto encontrado
-
-                # Cerrar la ventana de búsqueda
-                win.destroy() 
-                # Abrir la ventana de edición
-                abrir_ventana_edicion(product_data)
-
-            else:
-                messagebox.showinfo("No Encontrado", f"No se encontró ningún producto con ID o Código: {search_term}")
-        except mysql.connector.Error as err:
-            messagebox.showerror("Error de Base de Datos", f"Ocurrió un error al buscar el producto: {err}")
-        finally:
-            if db and db.is_connected():
-                cursor.close()
-                db.close()
-
-    tk.Button(win, text="Buscar Producto", command=cargar_datos_producto,
-              font=("Arial", 10, "bold"), width=20).pack(pady=15)
-    win.mainloop()
-
-def abrir_ventana_edicion(producto_actual):
-    """Abre la ventana para editar los detalles del producto."""
-    edit_win = tk.Toplevel()
-    edit_win.title(f"Editar Producto: {producto_actual['nombre']}")
-    edit_win.geometry("450x650")
-    edit_win.configure(bg="#f0f8ff")
-
-    label_font = ("Arial", 10)
-    entry_font = ("Arial", 10)
-    button_font = ("Arial", 10, "bold")
-
-    # Mostrar ID del producto (no editable)
-    tk.Label(edit_win, text=f"ID Producto: {producto_actual['id_producto']}", font=("Arial", 12, "bold"), bg="#f0f8ff").pack(pady=5)
-
-    tk.Label(edit_win, text="Código de Producto:", font=label_font, bg="#f0f8ff").pack(pady=5)
-    entry_codigo = tk.Entry(edit_win, font=entry_font, width=30)
-    entry_codigo.insert(0, producto_actual['codigo_producto'])
-    entry_codigo.pack(pady=2)
-
-    tk.Label(edit_win, text="Nombre:", font=label_font, bg="#f0f8ff").pack(pady=5)
-    entry_nombre = tk.Entry(edit_win, font=entry_font, width=30)
-    entry_nombre.insert(0, producto_actual['nombre'])
-    entry_nombre.pack(pady=2)
-
-    tk.Label(edit_win, text="Tipo (Cárnicos/Víveres):", font=label_font, bg="#f0f8ff").pack(pady=5)
-    tipo_options = ["Carnicos", "Viveres"]
-    combo_tipo = ttk.Combobox(edit_win, values=tipo_options, state="readonly", font=entry_font, width=28)
-    combo_tipo.set(producto_actual['tipo'])
-    combo_tipo.pack(pady=2)
-
-    tk.Label(edit_win, text="Fecha de Ingreso (YYYY-MM-DD):", font=label_font, bg="#f0f8ff").pack(pady=5)
-    entry_fecha_ingreso = tk.Entry(edit_win, font=entry_font, width=30)
-    entry_fecha_ingreso.insert(0, str(producto_actual['fecha_ingreso']))
-    entry_fecha_ingreso.pack(pady=2)
-
-    tk.Label(edit_win, text="Fecha de Vencimiento (YYYY-MM-DD):", font=label_font, bg="#f0f8ff").pack(pady=5)
-    entry_fecha_vencimiento = tk.Entry(edit_win, font=entry_font, width=30)
-    entry_fecha_vencimiento.insert(0, str(producto_actual['fecha_vencimiento']))
-    entry_fecha_vencimiento.pack(pady=2)
-
-    tk.Label(edit_win, text="Precio:", font=label_font, bg="#f0f8ff").pack(pady=5)
-    entry_precio = tk.Entry(edit_win, font=entry_font, width=30)
-    entry_precio.insert(0, str(producto_actual['precio']))
-    entry_precio.pack(pady=2)
-
-    tk.Label(edit_win, text="Cantidad:", font=label_font, bg="#f0f8ff").pack(pady=5)
-    entry_cantidad = tk.Entry(edit_win, font=entry_font, width=30)
-    entry_cantidad.insert(0, str(producto_actual['cantidad']))
-    entry_cantidad.pack(pady=2)
-
-    tk.Label(edit_win, text="ID Proveedor:", font=label_font, bg="#f0f8ff").pack(pady=5)
-    entry_id_proveedor = tk.Entry(edit_win, font=entry_font, width=30)
-    entry_id_proveedor.insert(0, str(producto_actual['id_proveedor']))
-    entry_id_proveedor.pack(pady=2)
-
-    def guardar_cambios():
-        nuevo_codigo = entry_codigo.get()
-        nuevo_nombre = entry_nombre.get()
-        nuevo_tipo = combo_tipo.get()
-        nueva_fecha_ingreso_str = entry_fecha_ingreso.get()
-        nueva_fecha_vencimiento_str = entry_fecha_vencimiento.get()
-        nuevo_precio_str = entry_precio.get()
-        nueva_cantidad_str = entry_cantidad.get()
-        nuevo_id_proveedor_str = entry_id_proveedor.get()
-
-        if not all([nuevo_codigo, nuevo_nombre, nuevo_tipo, nueva_fecha_ingreso_str, nueva_fecha_vencimiento_str, nuevo_precio_str, nueva_cantidad_str, nuevo_id_proveedor_str]):
-            messagebox.showwarning("Campos vacíos", "Por favor, complete todos los campos.")
-            return
-
-        if nuevo_tipo == "Seleccionar":
-            messagebox.showwarning("Tipo de Producto", "Por favor, seleccione un tipo de producto válido.")
-            return
-
-        try:
-            nueva_fecha_ingreso = datetime.strptime(nueva_fecha_ingreso_str, "%Y-%m-%d").date()
-            nueva_fecha_vencimiento = datetime.strptime(nueva_fecha_vencimiento_str, "%Y-%m-%d").date()
-            nuevo_precio = float(nuevo_precio_str)
-            nueva_cantidad = int(nueva_cantidad_str)
-            nuevo_id_proveedor = int(nuevo_id_proveedor_str)
-        except ValueError:
-            messagebox.showerror("Error de Formato", "Verifique que las fechas estén en formato YYYY-MM-DD, y que precio/cantidad/ID Proveedor sean números válidos.")
-            return
-        
-        db = conectar_db()
-        if db is None:
-            return
-
-        cursor = db.cursor()
-        try:
-            # Verificar si el nuevo proveedor existe
-            cursor.execute("SELECT id_proveedor FROM proveedor WHERE id_proveedor = %s", (nuevo_id_proveedor,))
-            if cursor.fetchone() is None:
-                messagebox.showerror("Error de Proveedor", "El ID de Proveedor ingresado no existe.")
-                return
-
-            # Verificar si el nuevo codigo_producto ya existe para otro producto (si se cambió el código)
-            if nuevo_codigo != producto_actual['codigo_producto']:
-                cursor.execute("SELECT id_producto FROM producto WHERE codigo_producto = %s", (nuevo_codigo,))
-                if cursor.fetchone():
-                    messagebox.showerror("Código Duplicado", "El nuevo código de producto ya existe para otro producto.")
-                    return
-
-            sql = """
-            UPDATE producto SET 
-                codigo_producto = %s, 
-                nombre = %s, 
-                tipo = %s, 
-                fecha_ingreso = %s, 
-                fecha_vencimiento = %s, 
-                precio = %s, 
-                cantidad = %s, 
-                id_proveedor = %s 
-            WHERE id_producto = %s
-            """
-            cursor.execute(sql, (
-                nuevo_codigo, nuevo_nombre, nuevo_tipo, 
-                nueva_fecha_ingreso, nueva_fecha_vencimiento, 
-                nuevo_precio, nueva_cantidad, nuevo_id_proveedor, 
-                producto_actual['id_producto']
-            ))
-            db.commit()
-            messagebox.showinfo("Éxito", "Producto actualizado correctamente.")
-            edit_win.destroy()
-        except mysql.connector.Error as err:
-            messagebox.showerror("Error de Base de Datos", f"Ocurrió un error al actualizar el producto: {err}")
-        finally:
-            if db and db.is_connected():
-                cursor.close()
-                db.close()
-
-    tk.Button(edit_win, text="Guardar Cambios", command=guardar_cambios,
-              font=button_font, bg="#007bff", fg="white", width=20, cursor="hand2").pack(pady=15)
-    edit_win.mainloop()
-
-# Placeholder para la función de consultar inventario general, si se desea una ventana específica
-def consultar_inventario_general():
-    """Abre una ventana que muestra todos los productos en el inventario."""
-    win = tk.Toplevel()
-    win.title("Inventario General de Productos")
-    win.geometry("900x500") # Ajusta el tamaño para mostrar más columnas
-    win.configure(bg="#f0f8ff")
-
-    tk.Label(win, text="Listado Completo de Productos", font=("Arial", 14, "bold"), bg="#f0f8ff").pack(pady=10)
+    # Crear un Frame para contener el Treeview y el botón de refrescar
+    inventory_container = ttk.Frame(parent_frame, style='MainContent.TFrame')
+    inventory_container.pack(fill="both", expand=True, padx=10, pady=10)
 
     # Crear el Treeview para mostrar los datos
-    tree = ttk.Treeview(win, columns=("ID", "Código", "Nombre", "Tipo", "Ingreso", "Vencimiento", "Precio", "Cantidad", "Proveedor ID"), show="headings")
+    tree = ttk.Treeview(inventory_container, columns=("ID", "Código", "Nombre", "Tipo", "Ingreso", "Vencimiento", "Precio", "Cantidad", "Proveedor ID"), show="headings")
 
     # Definir los encabezados de las columnas
     tree.heading("ID", text="ID", anchor=tk.W)
@@ -487,15 +601,15 @@ def consultar_inventario_general():
     tree.column("Cantidad", width=80, stretch=tk.NO)
     tree.column("Proveedor ID", width=80, stretch=tk.NO)
 
-    tree.pack(fill="both", expand=True, padx=10, pady=10)
+    tree.pack(side="left", fill="both", expand=True)
 
     # Añadir Scrollbars
-    vsb = ttk.Scrollbar(tree, orient="vertical", command=tree.yview)
+    vsb = ttk.Scrollbar(inventory_container, orient="vertical", command=tree.yview)
     vsb.pack(side='right', fill='y')
     tree.configure(yscrollcommand=vsb.set)
 
-    hsb = ttk.Scrollbar(tree, orient="horizontal", command=tree.xview)
-    hsb.pack(side='bottom', fill='x')
+    hsb = ttk.Scrollbar(parent_frame, orient="horizontal", command=tree.xview)
+    hsb.pack(side='bottom', fill='x', padx=10) # Adjuntado al parent_frame para que esté debajo del Treeview
     tree.configure(xscrollcommand=hsb.set)
 
     def cargar_productos():
@@ -527,7 +641,9 @@ def consultar_inventario_general():
                         prod['id_proveedor']
                     ))
             else:
-                messagebox.showinfo("Inventario Vacío", "No hay productos registrados en el inventario.")
+                # Si no hay productos, informar al usuario directamente en el Treeview o con un mensaje
+                # Se puede añadir una etiqueta aquí, o dejar el Treeview vacío.
+                pass # El Treeview simplemente aparecerá vacío si no hay datos.
 
         except mysql.connector.Error as err:
             messagebox.showerror("Error de Base de Datos", f"Ocurrió un error al consultar el inventario: {err}")
@@ -536,9 +652,7 @@ def consultar_inventario_general():
                 cursor.close()
                 db.close()
     
-    cargar_productos() # Cargar los productos al abrir la ventana
-    
-    # Botón para refrescar la lista
-    tk.Button(win, text="Refrescar Lista", command=cargar_productos).pack(pady=10)
+    cargar_productos() # Cargar los productos al construir la UI
 
-    win.mainloop()
+    # Botón para refrescar la lista
+    ttk.Button(parent_frame, text="Refrescar Lista", command=cargar_productos, style='Action.TButton').pack(pady=10)
