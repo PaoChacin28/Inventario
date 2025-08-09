@@ -2,21 +2,17 @@
 import mysql.connector
 from utils.db_connection import conectar_db
 
-def add_product(codigo_producto, nombre, tipo, unidad_medida, fecha_ingreso, fecha_vencimiento, cantidad, id_proveedor):
+def add_product(codigo_producto, nombre, tipo, id_proveedor):
+    """Inserta una definición de producto, sin stock."""
     db = conectar_db()
     if not db: return (False, "Error de conexión a la base de datos.")
     cursor = db.cursor()
     try:
-        # CORRECCIÓN: La columna y el valor de 'precio' han sido eliminados.
-        sql = """
-            INSERT INTO producto 
-            (codigo_producto, nombre, tipo, unidad_medida, fecha_ingreso, fecha_vencimiento, cantidad, id_proveedor) 
-            VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
-        """
-        val = (codigo_producto, nombre, tipo, unidad_medida, fecha_ingreso, fecha_vencimiento, cantidad, id_proveedor)
+        sql = "INSERT INTO producto (codigo_producto, nombre, tipo, id_proveedor) VALUES (%s, %s, %s, %s)"
+        val = (codigo_producto, nombre, tipo, id_proveedor)
         cursor.execute(sql, val)
         db.commit()
-        return (True, "Producto registrado correctamente.")
+        return (True, "Producto definido correctamente.")
     except mysql.connector.Error as err:
         db.rollback()
         if err.errno == 1062: return (False, f"El código de producto '{codigo_producto}' ya existe.")
@@ -25,18 +21,14 @@ def add_product(codigo_producto, nombre, tipo, unidad_medida, fecha_ingreso, fec
     finally:
         if db.is_connected(): cursor.close(); db.close()
 
-def update_product(product_id, nombre, tipo, unidad_medida, fecha_ingreso, fecha_vencimiento, cantidad, id_proveedor):
+def update_product(product_id, nombre, tipo, id_proveedor):
+    """Actualiza la definición de un producto."""
     db = conectar_db()
     if not db: return (False, "Error de conexión a la base de datos.")
     cursor = db.cursor()
     try:
-        # CORRECCIÓN: La columna y el valor de 'precio' han sido eliminados.
-        sql = """
-            UPDATE producto SET nombre=%s, tipo=%s, unidad_medida=%s, fecha_ingreso=%s, 
-            fecha_vencimiento=%s, cantidad=%s, id_proveedor=%s 
-            WHERE id_producto=%s
-        """
-        val = (nombre, tipo, unidad_medida, fecha_ingreso, fecha_vencimiento, cantidad, id_proveedor, product_id)
+        sql = "UPDATE producto SET nombre=%s, tipo=%s, id_proveedor=%s WHERE id_producto=%s"
+        val = (nombre, tipo, id_proveedor, product_id)
         cursor.execute(sql, val)
         db.commit()
         return (True, "Producto actualizado correctamente.")
@@ -47,7 +39,6 @@ def update_product(product_id, nombre, tipo, unidad_medida, fecha_ingreso, fecha
     finally:
         if db.is_connected(): cursor.close(); db.close()
 
-# Las funciones GET y DELETE no necesitan cambios en su lógica.
 def get_product_by_code(code):
     db = conectar_db()
     if not db: return None
@@ -58,15 +49,36 @@ def get_product_by_code(code):
     finally:
         if db.is_connected(): cursor.close(); db.close()
 
-def get_all_products():
+def get_all_products_with_stock():
+    """
+    Devuelve todos los productos y calcula su stock total sumando las cantidades de sus lotes activos.
+    CORREGIDO: Usa IFNULL para manejar productos sin stock.
+    """
     db = conectar_db()
     if not db: return []
     cursor = db.cursor(dictionary=True)
     try:
-        cursor.execute("SELECT * FROM producto ORDER BY nombre ASC")
+        # --- CORRECCIÓN CLAVE ---
+        # Usamos IFNULL(SUM(...), 0) para que si un producto no tiene lotes (SUM da NULL),
+        # se muestre un stock de 0 en lugar de nada.
+        sql = """
+            SELECT 
+                p.id_producto, p.codigo_producto, p.nombre, p.tipo,
+                prov.nombre AS nombre_proveedor,
+                IFNULL((SELECT SUM(l.cantidad_actual) FROM lote l WHERE l.id_producto = p.id_producto), 0) AS stock_total
+            FROM producto p
+            LEFT JOIN proveedor prov ON p.id_proveedor = prov.id_proveedor
+            ORDER BY p.nombre ASC
+        """
+        cursor.execute(sql)
         return cursor.fetchall()
+    except mysql.connector.Error as err:
+        print(f"Error en servicio al obtener productos con stock: {err}")
+        return []
     finally:
-        if db.is_connected(): cursor.close(); db.close()
+        if db.is_connected():
+            cursor.close()
+            db.close()
 
 def delete_product_by_code(code):
     db = conectar_db()
@@ -75,7 +87,7 @@ def delete_product_by_code(code):
     try:
         cursor.execute("DELETE FROM producto WHERE codigo_producto = %s", (code,))
         db.commit()
-        if cursor.rowcount > 0: return (True, f"Producto con código '{code}' eliminado correctamente.")
-        else: return (False, f"No se encontró un producto con el código '{code}'.")
+        if cursor.rowcount > 0: return (True, f"Producto con código '{code}' eliminado.")
+        else: return (False, f"No se encontró producto con código '{code}'.")
     finally:
         if db.is_connected(): cursor.close(); db.close()

@@ -1,29 +1,63 @@
 # controllers/movement_controller.py
 from tkinter import messagebox
 import services.movement_services as movement_service
-import services.product_services as product_service # Lo usamos para la vista de inventario general
 
 def handle_get_products_for_selection():
-    """Obtiene los productos para mostrarlos en el combobox de la vista."""
     return movement_service.get_products_for_selection()
 
-def handle_register_movement(product_id, movement_type, quantity_str, user_id):
-    """Valida la entrada y orquesta el registro de un movimiento."""
-    if not all([product_id, movement_type, quantity_str]):
-        messagebox.showwarning("Campos Incompletos", "Debe seleccionar un producto, tipo y cantidad.")
+def handle_get_active_lots_for_selection():
+    return movement_service.get_active_lots_for_selection()
+
+def handle_get_lots_for_product(product_id):
+    if not product_id: return []
+    return movement_service.get_lots_for_product(product_id)
+
+def handle_register_entry(data):
+    """Valida y registra una nueva entrada de lote, recibiendo un diccionario de datos."""
+    required = ['product_id', 'tag_lote', 'cantidad', 'unidad', 'user_id']
+    if any(data.get(field) is None for field in required):
+        messagebox.showwarning("Campos Incompletos", "Producto, Tag del Lote, Cantidad y Unidad son obligatorios.")
         return False
-        
     try:
-        quantity = int(quantity_str)
-        if quantity <= 0:
-            messagebox.showerror("Valor Inválido", "La cantidad debe ser un número entero positivo.")
-            return False
-    except ValueError:
-        messagebox.showerror("Formato Inválido", "La cantidad debe ser un número entero.")
+        cantidad = float(data['cantidad'])
+        if cantidad <= 0: raise ValueError()
+        data['cantidad'] = cantidad
+    except (ValueError, TypeError):
+        messagebox.showerror("Error de Formato", "La cantidad debe ser un número positivo.")
+        return False
+    
+    success, message = movement_service.register_entry_movement(**data)
+    if success:
+        messagebox.showinfo("Éxito", message)
+        return True
+    else:
+        messagebox.showerror("Error al Registrar Lote", message)
         return False
 
-    success, message = movement_service.register_inventory_movement(product_id, movement_type, quantity, user_id)
-    
+def handle_register_exit_or_adjustment(id_lote, cantidad_str, user_id, movement_type, descripcion):
+    """Valida y registra una salida o un ajuste de un lote."""
+    if not all([id_lote, cantidad_str]):
+        messagebox.showwarning("Campos Incompletos", "Debe seleccionar un lote y especificar la cantidad.")
+        return False
+        
+    if movement_type == 'Ajuste' and not descripcion:
+        messagebox.showwarning("Descripción Requerida", "Para un 'Ajuste', la descripción es obligatoria.")
+        return False
+
+    try:
+        cantidad = float(cantidad_str)
+        if movement_type == 'Salida' and cantidad <= 0:
+            messagebox.showerror("Valor Inválido", "La cantidad para una Salida debe ser un número positivo.")
+            return False
+    except ValueError:
+        messagebox.showerror("Formato Inválido", "La cantidad debe ser un número (puede ser negativo para ajustes).")
+        return False
+        
+    if movement_type == 'Salida':
+        success, message = movement_service.register_exit_movement(id_lote, cantidad, user_id)
+    else: # Es un Ajuste
+        success, message = movement_service.register_adjustment_movement(id_lote, cantidad, user_id, descripcion)
+
     if success:
         messagebox.showinfo("Éxito", message)
         return True
@@ -32,10 +66,4 @@ def handle_register_movement(product_id, movement_type, quantity_str, user_id):
         return False
 
 def handle_get_all_movements():
-    """Obtiene la lista de todos los movimientos."""
     return movement_service.get_all_movements_with_details()
-
-def handle_get_general_inventory():
-    """Obtiene la lista de todos los productos para la vista de inventario."""
-    # Reutilizamos el servicio de productos ya que es la misma consulta
-    return product_service.get_all_products()

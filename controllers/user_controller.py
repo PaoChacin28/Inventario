@@ -18,17 +18,13 @@ def handle_register_user(nombre_completo, usuario, contrasena, rol):
         return False
 
 def handle_find_user(username):
-    """Maneja la búsqueda de un usuario y retorna sus datos."""
+    """
+    Maneja la búsqueda de un usuario. Es SILENCIOSO.
+    Solo devuelve los datos o None.
+    """
     if not username:
-        messagebox.showwarning("Campo Vacío", "Por favor, ingrese el nombre de usuario a buscar.")
         return None
-
     user_data = user_service.get_user_by_username(username)
-
-    if user_data:
-        messagebox.showinfo("Usuario Encontrado", f"Datos de '{user_data['nombre_completo']}' cargados.")
-    else:
-        messagebox.showwarning("No Encontrado", f"No se encontró un usuario con el nombre '{username}'.")
     return user_data
 
 def handle_get_all_users():

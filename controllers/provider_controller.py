@@ -22,18 +22,13 @@ def handle_add_provider(nombre, rif, telefono, direccion):
         return False
 
 def handle_find_provider(rif):
-    """Maneja la búsqueda de un proveedor y retorna sus datos."""
+    """
+    Maneja la búsqueda de un proveedor. Es SILENCIOSO.
+    Solo devuelve los datos o None.
+    """
     if not rif:
-        messagebox.showwarning("Campo Vacío", "Por favor, ingrese el RIF a buscar.")
         return None
-    
     provider_data = provider_service.get_provider_by_rif(rif)
-    
-    if provider_data:
-        messagebox.showinfo("Proveedor Encontrado", f"Datos de '{provider_data['nombre']}' cargados.")
-    else:
-        messagebox.showwarning("No Encontrado", f"No se encontró un proveedor con el RIF '{rif}'.")
-        
     return provider_data
 
 def handle_get_all_providers():
