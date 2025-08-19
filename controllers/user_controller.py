@@ -47,20 +47,20 @@ def handle_update_user(user_id, nombre_completo, rol, nueva_contrasena):
         messagebox.showerror("Error de Actualización", message)
         return False
         
-def handle_delete_user(username):
-    """Maneja la confirmación y eliminación de un usuario."""
+def handle_deactivate_user(username):
+    """Maneja la desactivación de un usuario."""
     if not username:
-        messagebox.showwarning("Campo Vacío", "Por favor, ingrese el nombre de usuario a eliminar.")
+        messagebox.showwarning("Error", "No se ha proporcionado un nombre de usuario.")
+        return False
+        
+    if not messagebox.askyesno("Confirmar Desactivación", f"¿Está seguro de que desea desactivar al usuario '{username}'?\nYa no podrá iniciar sesión."):
         return False
 
-    if not messagebox.askyesno("Confirmar Eliminación", f"¿Está seguro de que desea eliminar al usuario '{username}'?"):
-        return False
-
-    success, message = user_service.delete_user_by_username(username)
-
+    success, message = user_service.deactivate_user_by_username(username)
+    
     if success:
         messagebox.showinfo("Éxito", message)
         return True
     else:
-        messagebox.showerror("Error de Eliminación", message)
+        messagebox.showerror("Error", message)
         return False

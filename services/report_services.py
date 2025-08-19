@@ -1,78 +1,129 @@
 # services/report_service.py
 import mysql.connector
 from datetime import datetime, timedelta
-from utils.db_connection import conectar_db # Asegúrate que tu conexión a la DB está en utils/database.py
+from utils.db_connection import conectar_db
 
 def get_low_stock_report_data(threshold=10):
     """
-    Obtiene los productos cuya cantidad es menor o igual a un umbral.
-    Retorna una lista de diccionarios, o None en caso de error de conexión.
+    Obtiene los productos ACTIVOS cuyo stock total consolidado está por debajo de un umbral.
     """
     db = conectar_db()
-    if not db: return None
-    
+    if not db: return []
     cursor = db.cursor(dictionary=True)
     try:
         sql = """
-            SELECT id_producto, codigo_producto, nombre, tipo, cantidad, fecha_vencimiento
-            FROM producto WHERE cantidad <= %s ORDER BY cantidad ASC
+            SELECT p.codigo_producto, p.nombre, p.tipo,
+                   IFNULL(SUM(l.cantidad_actual), 0) AS stock_total
+            FROM producto p
+            LEFT JOIN lote l ON p.id_producto = l.id_producto AND l.cantidad_actual > 0
+            WHERE p.estado = 'Activo'
+            GROUP BY p.id_producto
+            HAVING stock_total <= %s
+            ORDER BY stock_total ASC;
         """
         cursor.execute(sql, (threshold,))
         return cursor.fetchall()
-    except mysql.connector.Error as err:
-        print(f"Error en el servicio de reporte (stock bajo): {err}")
-        return [] # Retorna lista vacía en caso de error de consulta
     finally:
-        if db.is_connected():
-            cursor.close()
-            db.close()
+        if db.is_connected(): cursor.close(); db.close()
 
 def get_expiring_soon_report_data(days_ahead=30):
     """
-    Obtiene los productos que vencen en los próximos N días.
-    Retorna una lista de diccionarios, o None en caso de error de conexión.
+    Obtiene los lotes ACTIVOS que vencen en los próximos N días.
     """
     db = conectar_db()
-    if not db: return None
-    
+    if not db: return []
     cursor = db.cursor(dictionary=True)
     try:
         fecha_limite = datetime.now().date() + timedelta(days=days_ahead)
         sql = """
-            SELECT id_producto, codigo_producto, nombre, tipo, cantidad, fecha_vencimiento
-            FROM producto WHERE fecha_vencimiento IS NOT NULL AND fecha_vencimiento <= %s 
-            ORDER BY fecha_vencimiento ASC
+            SELECT 
+                p.codigo_producto, p.nombre,
+                l.tag_lote, l.cantidad_actual, l.unidad_medida, l.fecha_vencimiento
+            FROM lote l
+            JOIN producto p ON l.id_producto = p.id_producto
+            WHERE l.fecha_vencimiento IS NOT NULL 
+              AND l.fecha_vencimiento <= %s
+              AND l.cantidad_actual > 0
+              AND p.estado = 'Activo'
+            ORDER BY l.fecha_vencimiento ASC;
         """
         cursor.execute(sql, (fecha_limite,))
         return cursor.fetchall()
-    except mysql.connector.Error as err:
-        print(f"Error en el servicio de reporte (por vencer): {err}")
-        return [] # Retorna lista vacía en caso de error de consulta
     finally:
-        if db.is_connected():
-            cursor.close()
-            db.close()
-            
-def log_report_generation(report_type, user_id):
-    """
-    Inserta un registro en la tabla 'reporte' para auditar la generación.
-    Retorna True si fue exitoso, False en caso contrario.
-    """
-    db = conectar_db()
-    if not db: return False
+        if db.is_connected(): cursor.close(); db.close()
 
-    cursor = db.cursor()
+def get_movements_by_date_range(start_date, end_date):
+    """Obtiene todos los movimientos dentro de un rango de fechas."""
+    db = conectar_db()
+    if not db: return []
+    cursor = db.cursor(dictionary=True)
     try:
-        sql = "INSERT INTO reporte (fecha_generacion, tipo_reporte, id_usuario) VALUES (%s, %s, %s)"
-        val = (datetime.now(), report_type, user_id) # Usar datetime completo
-        cursor.execute(sql, val)
-        db.commit()
-        return True
-    except mysql.connector.Error as err:
-        db.rollback()
-        print(f"Error al registrar la generación de reporte: {err}")
-        return False
+        sql = """
+            SELECT m.fecha, p.nombre as producto_nombre, m.tipo, l.tag_lote, m.cantidad, m.descripcion, u.nombre_completo as usuario_nombre
+            FROM movimiento m
+            JOIN producto p ON m.id_producto = p.id_producto
+            JOIN usuario u ON m.id_usuario = u.id_usuario
+            LEFT JOIN lote l ON m.id_lote = l.id_lote
+            WHERE DATE(m.fecha) BETWEEN %s AND %s
+            ORDER BY m.fecha DESC
+        """
+        cursor.execute(sql, (start_date, end_date))
+        return cursor.fetchall()
     finally:
-        if db.is_connected():
-            cursor.close()
-            db.close()
+        if db.is_connected(): cursor.close(); db.close()
+
+def get_lot_traceability_report(lote_id):
+    """Obtiene el historial completo de movimientos de un lote específico."""
+    db = conectar_db()
+    if not db: return []
+    cursor = db.cursor(dictionary=True)
+    try:
+        sql = """
+            SELECT m.fecha, m.tipo, m.cantidad, m.descripcion, u.nombre_completo as usuario_nombre
+            FROM movimiento m
+            JOIN usuario u ON m.id_usuario = u.id_usuario
+            WHERE m.id_lote = %s
+            ORDER BY m.fecha ASC
+        """
+        cursor.execute(sql, (lote_id,))
+        return cursor.fetchall()
+    finally:
+        if db.is_connected(): cursor.close(); db.close()
+
+def get_movements_by_product(product_id, start_date, end_date):
+    """Obtiene todos los movimientos de un producto específico en un rango de fechas."""
+    db = conectar_db()
+    if not db: return []
+    cursor = db.cursor(dictionary=True)
+    try:
+        sql = """
+            SELECT m.fecha, l.tag_lote, m.tipo, m.cantidad, m.descripcion, u.nombre_completo as usuario_nombre
+            FROM movimiento m
+            JOIN usuario u ON m.id_usuario = u.id_usuario
+            LEFT JOIN lote l ON m.id_lote = l.id_lote
+            WHERE m.id_producto = %s AND DATE(m.fecha) BETWEEN %s AND %s
+            ORDER BY m.fecha DESC
+        """
+        cursor.execute(sql, (product_id, start_date, end_date))
+        return cursor.fetchall()
+    finally:
+        if db.is_connected(): cursor.close(); db.close()
+
+def get_entries_by_provider(provider_id, start_date, end_date):
+    """Obtiene todas las entradas (lotes) asociadas a productos de un proveedor específico en un rango de fechas."""
+    db = conectar_db()
+    if not db: return []
+    cursor = db.cursor(dictionary=True)
+    try:
+        sql = """
+            SELECT l.fecha_ingreso, p.nombre as producto_nombre, l.tag_lote, l.cantidad_inicial, l.unidad_medida, l.fecha_vencimiento
+            FROM lote l
+            JOIN producto p ON l.id_producto = p.id_producto
+            JOIN producto_proveedor pp ON p.id_producto = pp.id_producto
+            WHERE pp.id_proveedor = %s AND l.fecha_ingreso BETWEEN %s AND %s
+            ORDER BY l.fecha_ingreso DESC
+        """
+        cursor.execute(sql, (provider_id, start_date, end_date))
+        return cursor.fetchall()
+    finally:
+        if db.is_connected(): cursor.close(); db.close()

@@ -2,39 +2,37 @@
 import mysql.connector
 from utils.db_connection import conectar_db
 
-def add_product(codigo_producto, nombre, tipo, id_proveedor):
-    """Inserta una definición de producto, sin stock."""
+def add_product(codigo_producto, nombre, tipo):
+    """Inserta una definición de producto y devuelve su nuevo ID."""
     db = conectar_db()
     if not db: return (False, "Error de conexión a la base de datos.")
     cursor = db.cursor()
     try:
-        sql = "INSERT INTO producto (codigo_producto, nombre, tipo, id_proveedor) VALUES (%s, %s, %s, %s)"
-        val = (codigo_producto, nombre, tipo, id_proveedor)
+        sql = "INSERT INTO producto (codigo_producto, nombre, tipo) VALUES (%s, %s, %s)"
+        val = (codigo_producto, nombre, tipo)
         cursor.execute(sql, val)
         db.commit()
-        return (True, "Producto definido correctamente.")
+        return (True, cursor.lastrowid)
     except mysql.connector.Error as err:
         db.rollback()
         if err.errno == 1062: return (False, f"El código de producto '{codigo_producto}' ya existe.")
-        if err.errno == 1452: return (False, f"El proveedor con ID '{id_proveedor}' no existe.")
         return (False, f"Error de base de datos: {err}")
     finally:
         if db.is_connected(): cursor.close(); db.close()
 
-def update_product(product_id, nombre, tipo, id_proveedor):
-    """Actualiza la definición de un producto."""
+def update_product(product_id, nombre, tipo):
+    """Actualiza la definición de un producto (nombre y tipo)."""
     db = conectar_db()
     if not db: return (False, "Error de conexión a la base de datos.")
     cursor = db.cursor()
     try:
-        sql = "UPDATE producto SET nombre=%s, tipo=%s, id_proveedor=%s WHERE id_producto=%s"
-        val = (nombre, tipo, id_proveedor, product_id)
+        sql = "UPDATE producto SET nombre=%s, tipo=%s WHERE id_producto=%s"
+        val = (nombre, tipo, product_id)
         cursor.execute(sql, val)
         db.commit()
         return (True, "Producto actualizado correctamente.")
     except mysql.connector.Error as err:
         db.rollback()
-        if err.errno == 1452: return (False, f"El proveedor con ID '{id_proveedor}' no existe.")
         return (False, f"Error de base de datos al actualizar: {err}")
     finally:
         if db.is_connected(): cursor.close(); db.close()
@@ -50,44 +48,90 @@ def get_product_by_code(code):
         if db.is_connected(): cursor.close(); db.close()
 
 def get_all_products_with_stock():
-    """
-    Devuelve todos los productos y calcula su stock total sumando las cantidades de sus lotes activos.
-    CORREGIDO: Usa IFNULL para manejar productos sin stock.
-    """
     db = conectar_db()
     if not db: return []
     cursor = db.cursor(dictionary=True)
     try:
-        # --- CORRECCIÓN CLAVE ---
-        # Usamos IFNULL(SUM(...), 0) para que si un producto no tiene lotes (SUM da NULL),
-        # se muestre un stock de 0 en lugar de nada.
         sql = """
-            SELECT 
-                p.id_producto, p.codigo_producto, p.nombre, p.tipo,
-                prov.nombre AS nombre_proveedor,
-                IFNULL((SELECT SUM(l.cantidad_actual) FROM lote l WHERE l.id_producto = p.id_producto), 0) AS stock_total
+            SELECT p.id_producto, p.codigo_producto, p.nombre, p.tipo,
+                   IFNULL((SELECT SUM(l.cantidad_actual) FROM lote l WHERE l.id_producto = p.id_producto AND l.cantidad_actual > 0), 0) AS stock_total
             FROM producto p
-            LEFT JOIN proveedor prov ON p.id_proveedor = prov.id_proveedor
+            WHERE p.estado = 'Activo'
             ORDER BY p.nombre ASC
         """
         cursor.execute(sql)
         return cursor.fetchall()
+    finally:
+        if db.is_connected(): cursor.close(); db.close()
+
+def deactivate_product_by_code(code):
+    """Cambia el estado de un producto a 'Inactivo' (borrado lógico)."""
+    db = conectar_db()
+    if not db: return (False, "Error de conexión a la base de datos.")
+    cursor = db.cursor()
+    try:
+        sql = "UPDATE producto SET estado = 'Inactivo' WHERE codigo_producto = %s"
+        cursor.execute(sql, (code,))
+        db.commit()
+        if cursor.rowcount > 0:
+            return (True, "Producto desactivado correctamente.")
+        else:
+            return (False, "No se encontró el producto para desactivar.")
     except mysql.connector.Error as err:
-        print(f"Error en servicio al obtener productos con stock: {err}")
-        return []
+        db.rollback()
+        return (False, f"Error de base de datos al desactivar: {err}")
     finally:
         if db.is_connected():
             cursor.close()
             db.close()
 
-def delete_product_by_code(code):
+def get_providers_for_product(product_id):
     db = conectar_db()
-    if not db: return (False, "Error de conexión a la base de datos.")
+    if not db: return []
+    cursor = db.cursor(dictionary=True)
+    try:
+        sql = """
+            SELECT p.id_proveedor, p.nombre, p.rif, p.telefono, p.direccion 
+            FROM proveedor p
+            JOIN producto_proveedor pp ON p.id_proveedor = pp.id_proveedor
+            WHERE pp.id_producto = %s AND p.estado = 'Activo'
+            ORDER BY p.nombre ASC
+        """
+        cursor.execute(sql, (product_id,))
+        return cursor.fetchall()
+    finally:
+        if db.is_connected(): cursor.close(); db.close()
+
+def associate_provider_to_product(product_id, provider_id):
+    db = conectar_db()
+    if not db: return (False, "Error de conexión.")
     cursor = db.cursor()
     try:
-        cursor.execute("DELETE FROM producto WHERE codigo_producto = %s", (code,))
+        sql = "INSERT INTO producto_proveedor (id_producto, id_proveedor) VALUES (%s, %s)"
+        val = (product_id, provider_id)
+        cursor.execute(sql, val)
         db.commit()
-        if cursor.rowcount > 0: return (True, f"Producto con código '{code}' eliminado.")
-        else: return (False, f"No se encontró producto con código '{code}'.")
+        return (True, "Proveedor asociado correctamente.")
+    except mysql.connector.Error as err:
+        db.rollback()
+        if err.errno == 1062: return (False, "Este proveedor ya está asociado a este producto.")
+        return (False, f"Error al asociar proveedor: {err}")
+    finally:
+        if db.is_connected(): cursor.close(); db.close()
+
+def disassociate_provider_from_product(product_id, provider_id):
+    db = conectar_db()
+    if not db: return (False, "Error de conexión.")
+    cursor = db.cursor()
+    try:
+        sql = "DELETE FROM producto_proveedor WHERE id_producto = %s AND id_proveedor = %s"
+        val = (product_id, provider_id)
+        cursor.execute(sql, val)
+        db.commit()
+        if cursor.rowcount > 0: return (True, "Proveedor desasociado correctamente.")
+        else: return (False, "No se encontró la asociación para eliminar.")
+    except mysql.connector.Error as err:
+        db.rollback()
+        return (False, f"Error al desasociar proveedor: {err}")
     finally:
         if db.is_connected(): cursor.close(); db.close()

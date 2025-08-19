@@ -20,7 +20,8 @@ def show_register_provider_form(parent_frame):
     fields_container.grid(row=0, column=0, sticky="n", ipadx=150)
 
     entries = {}
-    field_labels = {"nombre": "Nombre", "rif": "RIF", "telefono": "Teléfono (Opcional)", "direccion": "Dirección (Opcional)"}
+    field_labels = {"nombre": "Nombre:*", "rif": "RIF:* (ej. J-12345678-9)", 
+                    "telefono": "Teléfono (Opcional)", "direccion": "Dirección (Opcional)"}
 
     for key, label_text in field_labels.items():
         field_frame = ttk.Frame(fields_container, style='MainContent.TFrame')
@@ -31,8 +32,15 @@ def show_register_provider_form(parent_frame):
         entries[key] = widget
         
     def guardar_action():
-        data = {key: widget.get().strip() for key, widget in entries.items()}
-        if provider_controller.handle_add_provider(**data):
+        """Recoge los datos y los envía al controlador para su validación y registro."""
+        nombre = entries['nombre'].get().strip()
+        rif = entries['rif'].get().strip()
+        telefono = entries['telefono'].get().strip()
+        direccion = entries['direccion'].get().strip()
+        
+        # El controlador se encarga de las validaciones y de mostrar los mensajes.
+        # Solo si devuelve True (éxito), cambiamos de vista.
+        if provider_controller.handle_add_provider(nombre=nombre, rif=rif, telefono=telefono, direccion=direccion):
             show_all_providers_list(parent_frame)
 
     button_frame = ttk.Frame(form_frame, style='MainContent.TFrame')
@@ -80,48 +88,6 @@ def show_edit_provider_form(parent_frame, provider_rif_to_edit):
     ttk.Button(button_frame, text="Actualizar Proveedor", command=actualizar_action, style='Action.TButton').pack(side='left', padx=5)
     ttk.Button(button_frame, text="Cancelar", command=lambda: show_all_providers_list(parent_frame), style='Delete.TButton').pack(side='left', padx=5)
 
-def show_delete_provider_form(parent_frame):
-    """Dibuja la interfaz para buscar y confirmar la eliminación de un proveedor."""
-    clear_frame(parent_frame)
-    ttk.Label(parent_frame, text="Eliminar Proveedor", style='ContentTitle.TLabel').pack(pady=20)
-
-    search_frame_container = ttk.Frame(parent_frame, style='MainContent.TFrame')
-    search_frame_container.pack(padx=20, pady=10, fill="x", anchor="n")
-    search_frame_container.columnconfigure(0, weight=1)
-    
-    search_field_frame = ttk.Frame(search_frame_container, style='MainContent.TFrame')
-    search_field_frame.grid(row=0, column=0, sticky="n", ipadx=100)
-    
-    ttk.Label(search_field_frame, text="RIF del Proveedor a Eliminar", style='ContentLabel.TLabel').pack(anchor="w")
-    search_entry = ttk.Entry(search_field_frame)
-    search_entry.pack(fill="x", side="left", expand=True)
-
-    details_container_frame = ttk.Frame(parent_frame, style='MainContent.TFrame')
-    current_provider_rif = None
-
-    def buscar_y_cargar_action():
-        nonlocal current_provider_rif
-        for widget in details_container_frame.winfo_children(): widget.destroy()
-        
-        provider_data = provider_controller.handle_find_provider(search_entry.get().strip())
-        
-        if provider_data:
-            current_provider_rif = provider_data['rif']
-            details_container_frame.pack(padx=20, pady=10, fill="x", anchor="n")
-            details_box = ttk.LabelFrame(details_container_frame, text="Verifique los datos del proveedor", style='TLabelFrame')
-            details_box.pack(pady=10, ipadx=20, ipady=10)
-            ttk.Label(details_box, text=f"Nombre: {provider_data['nombre']}", style='ContentLabel.TLabel').pack(anchor="w", padx=10, pady=2)
-            ttk.Label(details_box, text=f"Teléfono: {provider_data.get('telefono') or 'N/A'}", style='ContentLabel.TLabel').pack(anchor="w", padx=10, pady=2)
-            
-            def eliminar_action():
-                if provider_controller.handle_delete_provider(current_provider_rif):
-                    search_entry.delete(0, tk.END)
-                    for widget in details_container_frame.winfo_children(): widget.destroy()
-
-            ttk.Button(details_box, text=f"Confirmar Eliminación", command=eliminar_action, style='Delete.TButton').pack(pady=20)
-
-    ttk.Button(search_field_frame, text="Buscar", command=buscar_y_cargar_action, style='Search.TButton').pack(side="left", padx=(5,0))
-
 def show_all_providers_list(parent_frame):
     """Dibuja la vista principal de proveedores: lista, filtro y botones de acción."""
     clear_frame(parent_frame)
@@ -137,10 +103,10 @@ def show_all_providers_list(parent_frame):
     container = ttk.Frame(parent_frame, style='MainContent.TFrame')
     container.pack(fill="both", expand=True, padx=10, pady=10)
     
-    cols = ( "Nombre", "RIF", "Teléfono", "Dirección")
+    cols = ("ID", "Nombre", "RIF", "Teléfono", "Dirección")
     tree = ttk.Treeview(container, columns=cols, show="headings", selectmode="browse")
     for col in cols: tree.heading(col, text=col)
-    tree.column("Nombre", width=250); tree.column("Dirección", width=350)
+    tree.column("ID", width=60, stretch=tk.NO, anchor='center'); tree.column("Nombre", width=250); tree.column("Dirección", width=350)
     vsb = ttk.Scrollbar(container, orient="vertical", command=tree.yview)
     vsb.pack(side='right', fill='y')
     tree.pack(side="left", fill="both", expand=True)
@@ -156,7 +122,7 @@ def show_all_providers_list(parent_frame):
     def _populate_tree(data_list):
         for i in tree.get_children(): tree.delete(i)
         for p in data_list:
-            tree.insert("", "end", values=( p['nombre'], p['rif'], p['telefono'] or "N/A", p['direccion'] or "N/A"))
+            tree.insert("", "end", values=(p['id_proveedor'], p['nombre'], p['rif'], p['telefono'] or "N/A", p['direccion'] or "N/A"))
 
     def _on_search_change(*args):
         search_term = search_var.get().lower()
@@ -179,18 +145,26 @@ def show_all_providers_list(parent_frame):
         selected_items = tree.selection()
         if not selected_items: messagebox.showwarning("Sin selección", "Por favor, seleccione un proveedor para editar."); return
         selected_item = selected_items[0]
-        provider_rif = tree.item(selected_item)['values'][1] # RIF es la 3ra columna (índice 2)
+        provider_rif = tree.item(selected_item)['values'][2]
         show_edit_provider_form(parent_frame, provider_rif)
 
-    def on_delete_record():
+    def on_deactivate_record():
         selected_items = tree.selection()
-        if not selected_items: messagebox.showwarning("Sin selección", "Por favor, seleccione un proveedor para eliminar."); return
+        if not selected_items:
+            messagebox.showwarning("Sin selección", "Por favor, seleccione un proveedor para desactivar.")
+            return
+        
         selected_item = selected_items[0]
-        provider_rif = tree.item(selected_item)['values'][1] # RIF es la 3ra columna (índice 2)
-        if provider_controller.handle_delete_provider(provider_rif): _load_initial_data()
-
+        # El RIF es el valor en la tercera columna (índice 2)
+        provider_rif = tree.item(selected_item)['values'][2]
+        
+        # Llamamos al controlador. Él se encargará de pedir confirmación y mostrar mensajes.
+        # Si la operación fue exitosa (el controlador devuelve True), recargamos la lista.
+        if provider_controller.handle_deactivate_provider(provider_rif):
+            _load_initial_data()
+# --- BOTÓN CORREGIDO ---
     ttk.Button(action_frame, text="Añadir Nuevo Proveedor", command=on_add_record, style='Action.TButton').pack(side='left', padx=10)
-    ttk.Button(action_frame, text="Eliminar Seleccionado", command=on_delete_record, style='Delete.TButton').pack(side='right', padx=10)
+    ttk.Button(action_frame, text="Desincorporar Seleccionado", command=on_deactivate_record, style='Delete.TButton').pack(side='right', padx=10)
     ttk.Button(action_frame, text="Editar Seleccionado", command=on_edit_record, style='Action.TButton').pack(side='right')
 
     _load_initial_data()

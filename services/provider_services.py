@@ -105,29 +105,22 @@ def get_providers_for_selection():
             cursor.close()
             db.close()
 
-def delete_provider_by_rif(rif):
-    """
-    Elimina un proveedor usando su RIF.
-    Retorna (True, "Mensaje de éxito") o (False, "Mensaje de error").
-    """
+def deactivate_provider_by_rif(rif):
+    """Cambia el estado de un proveedor a 'Inactivo'."""
     db = conectar_db()
-    if not db:
-        return (False, "No se pudo conectar a la base de datos.")
-    
+    if not db: return (False, "Error de conexión a la base de datos.")
     cursor = db.cursor()
     try:
-        cursor.execute("DELETE FROM proveedor WHERE rif = %s", (rif,))
+        sql = "UPDATE proveedor SET estado = 'Inactivo' WHERE rif = %s"
+        cursor.execute(sql, (rif,))
         db.commit()
         if cursor.rowcount > 0:
-            return (True, f"Proveedor con RIF '{rif}' eliminado correctamente.")
+            return (True, "Proveedor desactivado correctamente.")
         else:
-            return (False, f"No se encontró un proveedor con RIF '{rif}'.")
+            return (False, "No se encontró el proveedor para desactivar.")
     except mysql.connector.Error as err:
         db.rollback()
-        # Error de restricción de clave foránea (el proveedor tiene productos)
-        if err.errno == 1451:
-            return (False, "No se puede eliminar. Este proveedor tiene productos asociados.")
-        return (False, f"Error al eliminar proveedor: {err}")
+        return (False, f"Error de base de datos al desactivar: {err}")
     finally:
         if db.is_connected():
             cursor.close()

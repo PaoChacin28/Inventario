@@ -2,6 +2,7 @@
 import mysql.connector
 from datetime import datetime
 from utils.db_connection import conectar_db
+from decimal import Decimal
 
 def get_products_for_selection():
     """Obtiene una lista simple de productos para usar en un combobox."""
@@ -85,27 +86,32 @@ def register_entry_movement(product_id, tag_lote, cantidad, unidad, fecha_vencim
         if db.is_connected(): cursor.close(); db.close()
 
 def register_exit_movement(id_lote, cantidad_salida, user_id):
-    """Descuenta de un lote existente y registra la salida en una transacción."""
+    """Descuenta de un lote existente, con conversión de tipos corregida."""
     db = conectar_db()
-    if not db: return (False, "Error de conexión a la base de datos.")
+    if not db: return (False, "Error de conexión.")
     cursor = db.cursor(dictionary=True)
     try:
         cursor.execute("SELECT * FROM lote WHERE id_lote = %s FOR UPDATE", (id_lote,))
         lote = cursor.fetchone()
         if not lote: return (False, "El lote seleccionado no existe.")
         
-        if lote['cantidad_actual'] < cantidad_salida:
-            return (False, f"Stock insuficiente en el lote '{lote['tag_lote']}'. Disponible: {lote['cantidad_actual']}.")
+        # --- CORRECCIÓN DE TIPO ---
+        cantidad_actual_decimal = lote['cantidad_actual']
+        cantidad_salida_decimal = Decimal(str(cantidad_salida))
+
+        if cantidad_actual_decimal < cantidad_salida_decimal:
+            return (False, f"Stock insuficiente. Disponible: {cantidad_actual_decimal}.")
             
-        nueva_cantidad = lote['cantidad_actual'] - cantidad_salida
+        nueva_cantidad = cantidad_actual_decimal - cantidad_salida_decimal
         cursor.execute("UPDATE lote SET cantidad_actual = %s WHERE id_lote = %s", (nueva_cantidad, id_lote))
         
         sql_mov = "INSERT INTO movimiento (tipo, cantidad, fecha, id_producto, id_usuario, id_lote) VALUES ('Salida', %s, %s, %s, %s, %s)"
-        val_mov = (cantidad_salida, datetime.now(), lote['id_producto'], user_id, id_lote)
+        val_mov = (cantidad_salida_decimal, datetime.now(), lote['id_producto'], user_id, id_lote)
         cursor.execute(sql_mov, val_mov)
         
         db.commit()
-        return (True, "Movimiento de salida registrado y stock del lote actualizado.")
+        return (True, "Movimiento de salida registrado.")
+        
     except mysql.connector.Error as err:
         db.rollback()
         return (False, f"Error en la transacción: {err}")
@@ -113,52 +119,67 @@ def register_exit_movement(id_lote, cantidad_salida, user_id):
         if db.is_connected(): cursor.close(); db.close()
 
 def register_adjustment_movement(id_lote, cantidad_ajuste, user_id, descripcion):
-    """Ajusta el stock de un lote y registra el movimiento."""
+    """Ajusta el stock de un lote, con conversión de tipos corregida."""
     db = conectar_db()
-    if not db: return (False, "Error de conexión a la base de datos.")
+    if not db: return (False, "Error de conexión.")
     cursor = db.cursor(dictionary=True)
     try:
         cursor.execute("SELECT * FROM lote WHERE id_lote = %s FOR UPDATE", (id_lote,))
         lote = cursor.fetchone()
         if not lote: return (False, "El lote seleccionado no existe.")
         
-        nueva_cantidad = lote['cantidad_actual'] + cantidad_ajuste
+        # --- CORRECCIÓN DE TIPO ---
+        cantidad_actual_decimal = lote['cantidad_actual']
+        cantidad_ajuste_decimal = Decimal(str(cantidad_ajuste))
+
+        nueva_cantidad = cantidad_actual_decimal + cantidad_ajuste_decimal
         if nueva_cantidad < 0:
-            return (False, f"El ajuste resultaría en stock negativo para el lote '{lote['tag_lote']}'.")
+            return (False, "El ajuste resultaría en stock negativo.")
             
         cursor.execute("UPDATE lote SET cantidad_actual = %s WHERE id_lote = %s", (nueva_cantidad, id_lote))
         
-        sql_mov = """INSERT INTO movimiento 
-                   (tipo, cantidad, descripcion, fecha, id_producto, id_usuario, id_lote) 
+        sql_mov = """INSERT INTO movimiento (tipo, cantidad, descripcion, fecha, id_producto, id_usuario, id_lote) 
                    VALUES ('Ajuste', %s, %s, %s, %s, %s, %s)"""
-        val_mov = (cantidad_ajuste, descripcion, datetime.now(), lote['id_producto'], user_id, id_lote)
+        val_mov = (cantidad_ajuste_decimal, descripcion, datetime.now(), lote['id_producto'], user_id, id_lote)
         cursor.execute(sql_mov, val_mov)
         
         db.commit()
-        return (True, "Ajuste de inventario registrado y stock del lote actualizado.")
+        return (True, "Ajuste de inventario registrado.")
+        
     except mysql.connector.Error as err:
         db.rollback()
         return (False, f"Error en la transacción: {err}")
     finally:
         if db.is_connected(): cursor.close(); db.close()
-
+        
 def get_all_movements_with_details():
-    """Obtiene todos los movimientos, incluyendo el tag del lote y la descripción."""
+    """
+    Obtiene todos los movimientos, incluyendo el tag del lote y la descripción.
+    CORREGIDO: Usa LEFT JOIN en todas las tablas para garantizar que no se omitan movimientos.
+    """
     db = conectar_db()
     if not db: return []
     cursor = db.cursor(dictionary=True)
     try:
+        # --- CORRECCIÓN CLAVE EN LA CONSULTA SQL ---
         sql = """
-            SELECT m.id_movimiento, m.fecha, m.tipo, m.cantidad, m.descripcion,
-                   p.nombre AS producto_nombre, u.nombre_completo AS usuario_nombre,
-                   l.tag_lote
+            SELECT 
+                m.id_movimiento, m.fecha, m.tipo, m.cantidad, m.descripcion,
+                p.nombre AS producto_nombre, 
+                u.nombre_completo AS usuario_nombre,
+                l.tag_lote
             FROM movimiento m
-            JOIN producto p ON m.id_producto = p.id_producto
-            JOIN usuario u ON m.id_usuario = u.id_usuario
+            LEFT JOIN producto p ON m.id_producto = p.id_producto
+            LEFT JOIN usuario u ON m.id_usuario = u.id_usuario
             LEFT JOIN lote l ON m.id_lote = l.id_lote
             ORDER BY m.fecha DESC, m.id_movimiento DESC
         """
         cursor.execute(sql)
         return cursor.fetchall()
+    except mysql.connector.Error as err:
+        print(f"Error en servicio al obtener el historial de movimientos: {err}")
+        return []
     finally:
-        if db.is_connected(): cursor.close(); db.close()
+        if db.is_connected():
+            cursor.close()
+            db.close()

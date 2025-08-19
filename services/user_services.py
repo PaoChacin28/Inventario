@@ -97,28 +97,22 @@ def update_user(user_id, nombre_completo, rol, nueva_contrasena=None):
             cursor.close()
             db.close()
 
-def delete_user_by_username(username):
-    """
-    Elimina un usuario por su nombre de usuario.
-    Retorna una tupla (éxito, mensaje).
-    """
+def deactivate_user_by_username(username):
+    """Cambia el estado de un usuario a 'Inactivo'."""
     db = conectar_db()
-    if not db:
-        return (False, "No se pudo conectar a la base de datos.")
-        
+    if not db: return (False, "Error de conexión a la base de datos.")
     cursor = db.cursor()
     try:
-        sql = "DELETE FROM usuario WHERE usuario = %s"
+        sql = "UPDATE usuario SET estado = 'Inactivo' WHERE usuario = %s"
         cursor.execute(sql, (username,))
         db.commit()
-
         if cursor.rowcount > 0:
-            return (True, f"Usuario '{username}' eliminado correctamente.")
+            return (True, "Usuario desactivado correctamente.")
         else:
-            return (False, f"No se encontró ningún usuario con el nombre '{username}'.")
+            return (False, "No se encontró el usuario para desactivar.")
     except mysql.connector.Error as err:
         db.rollback()
-        return (False, f"Error al eliminar usuario: {err}")
+        return (False, f"Error de base de datos al desactivar: {err}")
     finally:
         if db.is_connected():
             cursor.close()

@@ -171,16 +171,19 @@ def show_all_users_list(parent_frame):
         username = tree.item(selected_item)['values'][1]
         show_edit_user_form(parent_frame, username)
 
-    def on_delete_record():
+    def on_deactivate_record():
         selected_items = tree.selection()
-        if not selected_items: messagebox.showwarning("Sin selección", "Por favor, seleccione un usuario para eliminar."); return
-        selected_item = selected_items[0]
-        # --- CORRECCIÓN DE ÍNDICE ---
-        username = tree.item(selected_item)['values'][1]
-        if user_controller.handle_delete_user(username): _load_initial_data()
+        if not selected_items:
+            messagebox.showwarning("Sin selección", "Por favor, seleccione un usuario para desactivar.")
+            return
+        
+        username = tree.item(selected_items[0])['values'][2] # Usuario está en la 3a columna (índice 2)
+        
+        if user_controller.handle_deactivate_user(username):
+            _load_initial_data()
 
     ttk.Button(action_frame, text="Añadir Nuevo Usuario", command=on_add_record, style='Action.TButton').pack(side='left', padx=10)
-    ttk.Button(action_frame, text="Eliminar Seleccionado", command=on_delete_record, style='Delete.TButton').pack(side='right', padx=10)
+    ttk.Button(action_frame, text="Desincorporar Seleccionado", command=on_deactivate_record, style='Delete.TButton').pack(side='right', padx=10)
     ttk.Button(action_frame, text="Editar Seleccionado", command=on_edit_record, style='Action.TButton').pack(side='right')
 
     _load_initial_data()
