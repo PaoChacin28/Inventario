@@ -1,4 +1,5 @@
 # services/report_service.py
+
 import mysql.connector
 from datetime import datetime, timedelta
 from utils.db_connection import conectar_db
@@ -124,6 +125,30 @@ def get_entries_by_provider(provider_id, start_date, end_date):
             ORDER BY l.fecha_ingreso DESC
         """
         cursor.execute(sql, (provider_id, start_date, end_date))
+        return cursor.fetchall()
+    finally:
+        if db.is_connected(): cursor.close(); db.close()
+        
+def get_full_stock_report_data():
+    """
+    Obtiene el stock actual de TODOS los productos activos.
+    """
+    db = conectar_db()
+    if not db: return []
+    cursor = db.cursor(dictionary=True)
+    try:
+        # Esta consulta es similar a la de stock mínimo, pero sin el filtro HAVING.
+        sql = """
+            SELECT p.codigo_producto, p.nombre, p.tipo,
+                   IFNULL(SUM(l.cantidad_actual), 0) AS stock_total,
+                   GROUP_CONCAT(DISTINCT l.unidad_medida SEPARATOR ', ') as unidades
+            FROM producto p
+            LEFT JOIN lote l ON p.id_producto = l.id_producto AND l.cantidad_actual > 0
+            WHERE p.estado = 'Activo'
+            GROUP BY p.id_producto
+            ORDER BY p.nombre ASC;
+        """
+        cursor.execute(sql)
         return cursor.fetchall()
     finally:
         if db.is_connected(): cursor.close(); db.close()

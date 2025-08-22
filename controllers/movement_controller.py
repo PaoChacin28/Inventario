@@ -56,14 +56,18 @@ def handle_register_exit_or_adjustment(id_lote, cantidad_str, user_id, movement_
 
     try:
         cantidad = float(cantidad_str)
-        if movement_type == 'Salida' and cantidad <= 0:
-            messagebox.showerror("Valor Inválido", "La cantidad para una Salida debe ser un número positivo.")
-            return False
-        if movement_type == 'Ajuste' and cantidad == 0:
-            messagebox.showerror("Valor Inválido", "La cantidad para un Ajuste no puede ser cero.")
-            return False
+        # --- CAMBIO EN LA VALIDACIÓN DE AJUSTE ---
+        if movement_type == 'Salida':
+            if cantidad <= 0:
+                messagebox.showerror("Valor Inválido", "La cantidad para una Salida debe ser un número positivo.")
+                return False
+        elif movement_type == 'Ajuste':
+            # La nueva regla es que la cantidad de ajuste no puede ser negativa.
+            if cantidad < 0:
+                messagebox.showerror("Valor Inválido", "La cantidad para un Ajuste no puede ser un número negativo.")
+                return False
     except ValueError:
-        messagebox.showerror("Formato Inválido", "La cantidad debe ser un número (puede ser negativo para ajustes).")
+        messagebox.showerror("Formato Inválido", "La cantidad debe ser un número válido.")
         return False
         
     if movement_type == 'Salida':

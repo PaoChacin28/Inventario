@@ -118,8 +118,11 @@ def register_exit_movement(id_lote, cantidad_salida, user_id):
     finally:
         if db.is_connected(): cursor.close(); db.close()
 
-def register_adjustment_movement(id_lote, cantidad_ajuste, user_id, descripcion):
-    """Ajusta el stock de un lote, con conversión de tipos corregida."""
+def register_adjustment_movement(id_lote, nueva_cantidad_ajuste, user_id, descripcion):
+    """
+    Ajusta el stock de un lote a un valor específico (asignación directa).
+    El stock final no puede ser negativo.
+    """
     db = conectar_db()
     if not db: return (False, "Error de conexión.")
     cursor = db.cursor(dictionary=True)
@@ -128,23 +131,33 @@ def register_adjustment_movement(id_lote, cantidad_ajuste, user_id, descripcion)
         lote = cursor.fetchone()
         if not lote: return (False, "El lote seleccionado no existe.")
         
-        # --- CORRECCIÓN DE TIPO ---
-        cantidad_actual_decimal = lote['cantidad_actual']
-        cantidad_ajuste_decimal = Decimal(str(cantidad_ajuste))
-
-        nueva_cantidad = cantidad_actual_decimal + cantidad_ajuste_decimal
-        if nueva_cantidad < 0:
-            return (False, "El ajuste resultaría en stock negativo.")
-            
-        cursor.execute("UPDATE lote SET cantidad_actual = %s WHERE id_lote = %s", (nueva_cantidad, id_lote))
+        # --- CAMBIO FUNDAMENTAL EN LA LÓGICA DE AJUSTE ---
         
+        # 1. Convertimos a Decimal para precisión
+        cantidad_actual_decimal = lote['cantidad_actual']
+        nueva_cantidad_decimal = Decimal(str(nueva_cantidad_ajuste))
+
+        # 2. Validamos que el nuevo stock no sea negativo
+        if nueva_cantidad_decimal < 0:
+            # Esta es una doble validación, por si acaso la del controlador falla.
+            return (False, "El valor de ajuste no puede ser negativo.")
+            
+        # 3. Calculamos la DIFERENCIA para guardarla en la tabla de movimientos (para auditoría)
+        #    Ejemplo: Si stock era 3 y el ajuste es 10, el movimiento fue de +7.
+        #    Ejemplo: Si stock era 15 y el ajuste es 5, el movimiento fue de -10.
+        cantidad_para_movimiento = nueva_cantidad_decimal - cantidad_actual_decimal
+        
+        # 4. Actualizamos el lote con el nuevo valor absoluto
+        cursor.execute("UPDATE lote SET cantidad_actual = %s WHERE id_lote = %s", (nueva_cantidad_decimal, id_lote))
+        
+        # 5. Insertamos el movimiento con la DIFERENCIA calculada
         sql_mov = """INSERT INTO movimiento (tipo, cantidad, descripcion, fecha, id_producto, id_usuario, id_lote) 
                    VALUES ('Ajuste', %s, %s, %s, %s, %s, %s)"""
-        val_mov = (cantidad_ajuste_decimal, descripcion, datetime.now(), lote['id_producto'], user_id, id_lote)
+        val_mov = (cantidad_para_movimiento, descripcion, datetime.now(), lote['id_producto'], user_id, id_lote)
         cursor.execute(sql_mov, val_mov)
         
         db.commit()
-        return (True, "Ajuste de inventario registrado.")
+        return (True, "Ajuste de inventario registrado correctamente.")
         
     except mysql.connector.Error as err:
         db.rollback()

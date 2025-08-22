@@ -103,10 +103,10 @@ def show_all_providers_list(parent_frame):
     container = ttk.Frame(parent_frame, style='MainContent.TFrame')
     container.pack(fill="both", expand=True, padx=10, pady=10)
     
-    cols = ("ID", "Nombre", "RIF", "Teléfono", "Dirección")
+    cols = ("Nombre", "RIF", "Teléfono", "Dirección")
     tree = ttk.Treeview(container, columns=cols, show="headings", selectmode="browse")
     for col in cols: tree.heading(col, text=col)
-    tree.column("ID", width=60, stretch=tk.NO, anchor='center'); tree.column("Nombre", width=250); tree.column("Dirección", width=350)
+    tree.column("Nombre", width=250); tree.column("Dirección", width=350)
     vsb = ttk.Scrollbar(container, orient="vertical", command=tree.yview)
     vsb.pack(side='right', fill='y')
     tree.pack(side="left", fill="both", expand=True)
@@ -122,7 +122,7 @@ def show_all_providers_list(parent_frame):
     def _populate_tree(data_list):
         for i in tree.get_children(): tree.delete(i)
         for p in data_list:
-            tree.insert("", "end", values=(p['id_proveedor'], p['nombre'], p['rif'], p['telefono'] or "N/A", p['direccion'] or "N/A"))
+            tree.insert("", "end", values=( p['nombre'], p['rif'], p['telefono'] or "N/A", p['direccion'] or "N/A"))
 
     def _on_search_change(*args):
         search_term = search_var.get().lower()
@@ -145,7 +145,7 @@ def show_all_providers_list(parent_frame):
         selected_items = tree.selection()
         if not selected_items: messagebox.showwarning("Sin selección", "Por favor, seleccione un proveedor para editar."); return
         selected_item = selected_items[0]
-        provider_rif = tree.item(selected_item)['values'][2]
+        provider_rif = tree.item(selected_item)['values'][1]
         show_edit_provider_form(parent_frame, provider_rif)
 
     def on_deactivate_record():
@@ -156,7 +156,7 @@ def show_all_providers_list(parent_frame):
         
         selected_item = selected_items[0]
         # El RIF es el valor en la tercera columna (índice 2)
-        provider_rif = tree.item(selected_item)['values'][2]
+        provider_rif = tree.item(selected_item)['values'][1]
         
         # Llamamos al controlador. Él se encargará de pedir confirmación y mostrar mensajes.
         # Si la operación fue exitosa (el controlador devuelve True), recargamos la lista.
