@@ -2,166 +2,131 @@
 
 import os
 import tempfile
-import shutil
 import webbrowser
-from tkinter import filedialog, messagebox
+from tkinter import messagebox
 from datetime import datetime
 from fpdf import FPDF
-import csv
+from utils.validation import resource_path
+import re
 
-# Clase auxiliar para tener un header y footer estándar en los PDFs
+# --- NUEVAS IMPORTACIONES PARA REPORTLAB ---
+from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Image
+from reportlab.lib.styles import getSampleStyleSheet
+from reportlab.lib.units import inch
+from reportlab.lib.pagesizes import letter
+
+# ==============================================================================
+# SECCIÓN DE FPDF2 (PARA REPORTES TABULARES - SIN CAMBIOS)
+# ==============================================================================
 class PDF(FPDF):
     def header(self):
         self.set_font('Arial', 'B', 12)
-        # Puedes descomentar esto si tienes un logo en 'assets/images/logo_empresa.png'
         try:
-             self.image('images/logo_empresa.png', 10, 8, 33)
-        except Exception:
-            self.cell(40, 10, 'Logo JPG')
-        
+            logo = resource_path("images/logo_empresa.png")
+            self.image(logo, 10, 8, 33)
+        except Exception as e:
+            print(f"No se pudo cargar el logo para el reporte: {e}")
         self.cell(0, 10, 'Reporte de Inventario', 0, 1, 'C')
         self.set_font('Arial', '', 8)
         self.cell(0, 10, f'Generado el: {datetime.now().strftime("%d/%m/%Y %H:%M:%S")}', 0, 1, 'C')
         self.ln(10)
-
     def footer(self):
-        self.set_y(-15)
-        self.set_font('Arial', 'I', 8)
-        self.cell(0, 10, f'Página {self.page_no()}', 0, 0, 'C')
+        self.set_y(-15); self.set_font('Arial', 'I', 8); self.cell(0, 10, f'Página {self.page_no()}', 0, 0, 'C')
 
 def generate_and_preview_pdf(data_list, headers, report_title='Reporte'):
-    """
-    Genera un PDF, lo guarda en un archivo temporal, lo abre y devuelve su ruta.
-    """
-    if not data_list:
-        messagebox.showwarning("Sin Datos", "No hay datos para generar el PDF.")
-        return None
-
+    # ... (Esta función para reportes tabulares se queda como está, funciona bien)
+    if not data_list: messagebox.showwarning("Sin Datos", "No hay datos para generar el PDF."); return None
     try:
-        pdf = PDF('L', 'mm', 'A4') # 'L' para formato horizontal (Landscape)
+        pdf = PDF('L', 'mm', 'A4')
         pdf.add_page()
-        pdf.set_font('Arial', 'B', 14)
-        pdf.cell(0, 10, report_title, 0, 1, 'L')
-        pdf.ln(5)
-
+        # ... (resto del código de esta función sin cambios)
+        pdf.set_font('Arial', 'B', 14); pdf.cell(0, 10, report_title, 0, 1, 'L'); pdf.ln(5)
         pdf.set_font('Arial', 'B', 9)
         num_columns = len(headers)
         page_width = pdf.w - 2 * pdf.l_margin
         cell_width = page_width / num_columns if num_columns > 0 else page_width
-
-        for header_text in headers.values():
-            pdf.cell(cell_width, 10, header_text, 1, 0, 'C')
+        if cell_width < 5: messagebox.showerror("Error de Formato", "El reporte tiene demasiadas columnas para exportar a PDF."); return None
+        for header_text in headers.values(): pdf.cell(cell_width, 10, header_text, 1, 0, 'C')
         pdf.ln()
-
         pdf.set_font('Arial', '', 8)
         for row_data in data_list:
             for key in headers.keys():
-                value = str(row_data.get(key, ''))
-                pdf.cell(cell_width, 10, value, 1, 0, 'L')
+                value = str(row_data.get(key, '')); pdf.cell(cell_width, 10, value, 1, 0, 'L')
             pdf.ln()
-
-        temp_dir = tempfile.gettempdir()
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        temp_filepath = os.path.join(temp_dir, f"report_preview_{timestamp}.pdf")
-        
+        temp_filepath = os.path.join(tempfile.gettempdir(), f"report_preview_{datetime.now().strftime('%Y%m%d_%H%M%S')}.pdf")
         pdf.output(temp_filepath)
+        webbrowser.open(f'file://{os.path.realpath(temp_filepath)}')
+        return temp_filepath
+    except Exception as e:
+        messagebox.showerror("Error al Generar PDF", f"Ocurrió un error inesperado:\n{e}"); return None
 
+# ==============================================================================
+# NUEVA SECCIÓN DE REPORTLAB (PARA EL MANUAL)
+# ==============================================================================
+def export_manual_with_reportlab(manual_text, title='Manual de Usuario'):
+    """
+    Genera un PDF profesional del manual usando ReportLab y lo abre.
+    """
+    try:
+        temp_dir = tempfile.gettempdir()
+        temp_filepath = os.path.join(temp_dir, f"manual_preview_{datetime.now().strftime('%Y%m%d_%H%M%S')}.pdf")
+        
+        # 1. Crear el documento PDF
+        doc = SimpleDocTemplate(temp_filepath, pagesize=letter)
+        
+        # 2. Definir estilos de texto
+        styles = getSampleStyleSheet()
+        style_title = styles['Title']
+        style_h1 = styles['h1']
+        style_h2 = styles['h2']
+        style_body = styles['BodyText']
+        style_body.leading = 14 # Espacio entre líneas
+        
+        # 3. Construir la historia (el contenido del PDF)
+        story = []
+
+        # Añadir el logo
         try:
-            webbrowser.open(f'file://{os.path.realpath(temp_filepath)}')
-        except Exception:
-             messagebox.showinfo("Vista Previa", f"El PDF se ha generado en:\n{temp_filepath}\n\nNo se pudo abrir automáticamente.")
+            logo_path = resource_path("images/logo_empresa.png")
+            logo = Image(logo_path, width=2*inch, height=0.6*inch)
+            logo.hAlign = 'LEFT'
+            story.append(logo)
+            story.append(Spacer(1, 0.25*inch))
+        except Exception as e:
+            print(f"No se pudo cargar el logo para el manual de ReportLab: {e}")
 
+        # Procesar el texto y añadirlo a la historia con el formato correcto
+        lines = manual_text.strip().split('\n')
+        for line in lines:
+            line = line.strip()
+            if not line:
+                continue # Ignorar líneas vacías
+            
+            if line.startswith('Sistema de Control'):
+                story.append(Paragraph(line, style_title))
+                story.append(Spacer(1, 0.2*inch))
+            elif line.startswith('Versión 1.0'):
+                story.append(Paragraph(line, styles['Normal']))
+                story.append(Spacer(1, 0.5*inch))
+            elif line.startswith('---'):
+                continue # Usamos Spacers en su lugar
+            elif re.match(r"^\d\.\d\.", line): # Subtítulo (e.g. 2.1.)
+                story.append(Paragraph(line, style_h2))
+                story.append(Spacer(1, 0.1*inch))
+            elif re.match(r"^\d\.", line): # Título principal (e.g. 1.)
+                story.append(Spacer(1, 0.2*inch))
+                story.append(Paragraph(line, style_h1))
+                story.append(Spacer(1, 0.1*inch))
+            else:
+                story.append(Paragraph(line, style_body))
+        
+        # 4. Generar el PDF
+        doc.build(story)
+        
+        # 5. Abrir el PDF generado
+        webbrowser.open(f'file://{os.path.realpath(temp_filepath)}')
         return temp_filepath
 
     except Exception as e:
-        messagebox.showerror("Error al Generar PDF", f"Ocurrió un error inesperado:\n{e}")
+        messagebox.showerror("Error al Generar PDF con ReportLab", f"Ocurrió un error inesperado:\n{e}")
         return None
-
-def save_pdf(temp_filepath, default_filename='reporte'):
-    """
-    Mueve un archivo PDF temporal a una ubicación permanente elegida por el usuario.
-    """
-    if not temp_filepath or not os.path.exists(temp_filepath):
-        messagebox.showerror("Error", "No hay un archivo de vista previa para guardar.")
-        return
-
-    timestamp = datetime.now().strftime("%Y%m%d")
-    filename_suggestion = f"{default_filename}_{timestamp}.pdf"
-
-    filepath = filedialog.asksaveasfilename(
-        defaultextension=".pdf",
-        filetypes=[("Archivos PDF", "*.pdf"), ("Todos los archivos", "*.*")],
-        initialfile=filename_suggestion,
-        title="Guardar Reporte PDF"
-    )
-
-    if not filepath:
-        return # Usuario canceló el diálogo
-
-    try:
-        shutil.move(temp_filepath, filepath)
-        messagebox.showinfo("Éxito", f"Reporte guardado exitosamente en:\n{filepath}")
-    except PermissionError:
-        messagebox.showerror("Error de Permisos", "No se pudo guardar el archivo. Verifique los permisos y que el archivo no esté abierto.")
-    except Exception as e:
-        messagebox.showerror("Error al Guardar", f"Ocurrió un error inesperado:\n{e}")
-
-# Mantenemos la función de exportar a CSV por si la necesitas en otro lugar
-def export_to_csv(data_list, headers, default_filename='reporte'):
-    # ... (tu código original de CSV aquí, sin cambios)
-    pass
-
-def export_to_csv(data_list, headers, default_filename='reporte'):
-    """
-    Exporta una lista de diccionarios a un archivo CSV.
-    
-    Args:
-        data_list (list): La lista de datos, donde cada elemento es un diccionario
-                          que representa una fila.
-        headers (dict): Un diccionario que mapea las claves de los datos (keys) a los
-                        nombres de columna deseados (values). Ej: {'producto_nombre': 'Producto'}
-        default_filename (str): El nombre base para el archivo sugerido.
-    """
-    if not data_list:
-        messagebox.showwarning("Sin Datos", "No hay datos en la tabla para exportar.")
-        return
-
-    # Sugerir un nombre de archivo con fecha y hora para que sea único
-    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    filename_suggestion = f"{default_filename}_{timestamp}.csv"
-
-    # Abrir el diálogo para que el usuario elija dónde guardar el archivo
-    filepath = filedialog.asksaveasfilename(
-        defaultextension=".csv",
-        filetypes=[("Archivos CSV", "*.csv"), ("Todos los archivos", "*.*")],
-        initialfile=filename_suggestion,
-        title="Guardar Reporte como CSV"
-    )
-
-    # Si el usuario presiona "Cancelar", filepath será una cadena vacía
-    if not filepath:
-        return
-
-    # Obtener las claves de los datos en el orden de las cabeceras
-    data_keys = list(headers.keys())
-    # Obtener los nombres de las cabeceras en el mismo orden
-    header_names = list(headers.values())
-
-    try:
-        with open(filepath, 'w', newline='', encoding='utf-8-sig') as csvfile:
-            # Usar DictWriter para manejar fácilmente la escritura desde diccionarios
-            writer = csv.DictWriter(csvfile, fieldnames=data_keys)
-            
-            # Escribir la cabecera usando los nombres amigables del diccionario de headers
-            csvfile.write(','.join(header_names) + '\n')
-            
-            # Escribir todas las filas de datos
-            writer.writerows(data_list)
-        
-        messagebox.showinfo("Éxito", f"Reporte exportado exitosamente en:\n{filepath}")
-    except PermissionError:
-        messagebox.showerror("Error de Permisos", "No se pudo guardar el archivo.\n"
-                                                  "Asegúrese de tener permisos de escritura en la carpeta seleccionada "
-                                                  "y que el archivo no esté abierto en otro programa (ej. Excel).")
-    except Exception as e:
-        messagebox.showerror("Error al Exportar", f"Ocurrió un error inesperado al guardar el archivo:\n{e}")

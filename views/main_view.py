@@ -5,13 +5,14 @@ from PIL import Image, ImageTk
 
 from views import user_view, provider_view, product_view, movement_view, report_view
 from views import help_view
+from utils.validation import resource_path
 
 content_frame = None
 
 def _clear_frame(frame):
     for widget in frame.winfo_children(): widget.destroy()
 
-def create_main_menu_window(rol, user_id, login_window_ref):
+def create_main_menu_window(rol, user_id, login_window_ref, login_action_ref):
     global content_frame
     
     main_window = tk.Toplevel(login_window_ref)
@@ -45,7 +46,7 @@ def create_main_menu_window(rol, user_id, login_window_ref):
     
     # --- LÓGICA DEL LOGO PEQUEÑO ---
     try:
-        logo_path = "images/logo_empresa.png"
+        logo_path = resource_path("images/logo_empresa.png")
         logo_original = Image.open(logo_path)
         logo_redimensionado = logo_original.resize((150, 50), Image.LANCZOS)
         logo_tk = ImageTk.PhotoImage(logo_redimensionado)
@@ -67,7 +68,7 @@ def create_main_menu_window(rol, user_id, login_window_ref):
         hide_header() # Ocultamos el header en la pantalla de inicio
         _clear_frame(content_frame)
         try:
-            img_path = "images/logo_empresa.png"
+            img_path = resource_path("images/logo_empresa.png")
             logo_img_grande = ImageTk.PhotoImage(Image.open(img_path).resize((350, 150), Image.LANCZOS))
             logo_label_grande = ttk.Label(content_frame, image=logo_img_grande, style='ContentBackground.TLabel')
             logo_label_grande.image = logo_img_grande
@@ -110,12 +111,15 @@ def create_main_menu_window(rol, user_id, login_window_ref):
         add_menu_button("Usuarios", navigate_to_users)
         add_menu_button("Proveedores", navigate_to_providers)
         add_menu_button("Reportes", navigate_to_reports)
+        add_menu_button("Manual de Usuario", lambda: help_view.show_full_manual_in_frame(content_frame))
 
     add_menu_button("Ayuda", lambda: help_view.show_help_manual(main_window))
+    
     
     def logout_action():
         main_window.destroy()
         login_window_ref.deiconify()
+        login_window_ref.bind('<Return>', login_action_ref)
     
     add_menu_button("Cerrar Sesión", logout_action)
 

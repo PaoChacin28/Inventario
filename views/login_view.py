@@ -8,6 +8,7 @@ import mysql.connector
 from utils.db_connection import conectar_db
 from utils import styles # Importamos el módulo de estilos para que se carguen al inicio
 from views import main_view
+from utils.validation import resource_path
 
 def _verify_credentials(username, password):
     """
@@ -37,44 +38,32 @@ def create_login_window():
     login_window = tk.Tk()
     login_window.title("Inicio de Sesión - Sistema de Inventario")
     
-    # Llamamos a la configuración de estilos UNA SOLA VEZ al inicio de la app.
     styles.configure_styles(login_window)
-    
     login_window.geometry("550x650")
     login_window.resizable(False, False)
 
-    # --- Configurar la imagen de fondo ---
     try:
-        # La ruta a la imagen ahora parte de la carpeta raíz del proyecto
-        img_path = "images/JPG.jpg"
+        img_path = resource_path("images/JPG.jpg")
         bg_image = ImageTk.PhotoImage(Image.open(img_path).resize((550, 650), Image.LANCZOS))
         bg_label = tk.Label(login_window, image=bg_image)
         bg_label.place(x=0, y=0, relwidth=1, relheight=1)
-        bg_label.image = bg_image # Mantener referencia para evitar que el recolector de basura la elimine
+        bg_label.image = bg_image
     except Exception as e:
         print(f"Advertencia: No se pudo cargar la imagen de fondo. Error: {e}")
         login_window.configure(bg="#e0f2f7")
 
-    # --- Frame para el contenido del login ---
-    # Usamos un Frame normal para poder controlar mejor el background sobre la imagen.
     content_frame = tk.Frame(login_window, bg="white", relief="groove", bd=2)
-    
-    # --- ¡CORRECCIÓN IMPORTANTE! APLICAMOS TAMAÑO FIJO Y CENTRADO ---
     content_frame.place(relx=0.5, rely=0.5, anchor="center", width=250, height=250)
-    # ----------------------------------------------------------------
-
-    # Widgets dentro del frame. Usamos bg="white" para que no sean transparentes.
+    
     ttk.Label(content_frame, text="Sistema de Inventario", font=("Arial", 14, "bold"), background="white").pack(pady=(20, 10))
-
     ttk.Label(content_frame, text="Usuario:", font=("Arial", 12), background="white").pack(pady=(1,0))
     user_entry = ttk.Entry(content_frame, font=("Arial", 12), width=20)
     user_entry.pack(pady=1, padx=20)
-
     ttk.Label(content_frame, text="Contraseña:", font=("Arial", 12), background="white").pack(pady=(1,0))
     pass_entry = ttk.Entry(content_frame, show="*", font=("Arial", 12), width=20)
     pass_entry.pack(pady=1, padx=20)
 
-    def login_action():
+    def login_action(event=None):
         username = user_entry.get().strip()
         password = pass_entry.get().strip()
 
@@ -85,13 +74,19 @@ def create_login_window():
         user_data = _verify_credentials(username, password)
         
         if user_data:
+            # --- CAMBIO 1: Desvinculamos la tecla 'Enter' para evitar re-logins ---
+            login_window.unbind('<Return>')
+            
             login_window.withdraw()
-            main_view.create_main_menu_window(user_data['rol'], user_data['id_usuario'], login_window)
+            
+            # --- CAMBIO 2: Pasamos la función 'login_action' como referencia ---
+            main_view.create_main_menu_window(user_data['rol'], user_data['id_usuario'], login_window, login_action)
         else:
             messagebox.showerror("Error de Inicio de Sesión", "Usuario o contraseña incorrectos.")
 
-    # El estilo 'Accent.TButton' fue definido en styles.py
     login_button = ttk.Button(content_frame, text="Iniciar Sesión", command=login_action, style='Accent.TButton')
     login_button.pack(pady=20)
+    login_window.bind('<Return>', login_action)
+    user_entry.focus_set()
 
     login_window.mainloop()

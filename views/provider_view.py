@@ -31,7 +31,7 @@ def show_register_provider_form(parent_frame):
         widget.pack(fill="x")
         entries[key] = widget
         
-    def guardar_action():
+    def guardar_action(event=None):
         """Recoge los datos y los envía al controlador para su validación y registro."""
         nombre = entries['nombre'].get().strip()
         rif = entries['rif'].get().strip()
@@ -47,6 +47,13 @@ def show_register_provider_form(parent_frame):
     button_frame.grid(row=1, column=0, pady=20)
     ttk.Button(button_frame, text="Guardar Proveedor", command=guardar_action, style='Action.TButton').pack(side='left', padx=5)
     ttk.Button(button_frame, text="Cancelar", command=lambda: show_all_providers_list(parent_frame), style='Delete.TButton').pack(side='left', padx=5)
+    
+    top_level_window = parent_frame.winfo_toplevel()
+    top_level_window.bind('<Return>', guardar_action)
+
+    # Ponemos el foco en el primer campo de entrada
+    entries['nombre'].focus_set()
+  
     
 def show_edit_provider_form(parent_frame, provider_rif_to_edit):
     """Dibuja el formulario para editar un proveedor específico."""

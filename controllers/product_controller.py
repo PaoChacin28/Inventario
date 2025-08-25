@@ -79,13 +79,36 @@ def handle_deactivate_product(code):
 def handle_get_providers_for_product(product_id):
     return product_service.get_providers_for_product(product_id)
 
-def handle_associate_provider(product_id, provider_id):
-    if not product_id or not provider_id:
-        messagebox.showwarning("Datos incompletos", "Se requiere un producto y un proveedor.")
+def handle_update_product_and_associations(product_id, product_data, final_provider_ids):
+    """
+    Orquesta la actualización completa de un producto y sus asociaciones.
+    """
+    # 1. Actualizar la definición del producto (nombre, tipo)
+    success, message = product_service.update_product(product_id, product_data['nombre'], product_data['tipo'])
+    if not success:
+        messagebox.showerror("Error de Actualización", message)
         return False
-    success, message = product_service.associate_provider_to_product(product_id, provider_id)
-    if not success: messagebox.showerror("Error", message)
-    return success
+
+    # 2. Sincronizar las asociaciones de proveedores
+    # Obtenemos los proveedores que estaban asociados originalmente
+    initial_providers_raw = product_service.get_providers_for_product(product_id)
+    initial_provider_ids = {p['id_proveedor'] for p in initial_providers_raw}
+
+    # Calculamos las diferencias
+    providers_to_add = final_provider_ids - initial_provider_ids
+    providers_to_remove = initial_provider_ids - final_provider_ids
+
+    # 3. Realizamos las operaciones
+    for prov_id in providers_to_add:
+        product_service.associate_provider_to_product(product_id, prov_id)
+    
+    for prov_id in providers_to_remove:
+        product_service.disassociate_provider_from_product(product_id, prov_id)
+
+    messagebox.showinfo("Éxito", f"Producto actualizado correctamente.\n"
+                                 f"{len(providers_to_add)} proveedores añadidos.\n"
+                                 f"{len(providers_to_remove)} proveedores eliminados.")
+    return True
 
 def handle_disassociate_provider(product_id, provider_id):
     if not product_id or not provider_id: return False
