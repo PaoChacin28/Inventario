@@ -177,7 +177,7 @@ def show_all_users_list(parent_frame):
             messagebox.showwarning("Sin selección", "Por favor, seleccione un usuario para desactivar.")
             return
         
-        username = tree.item(selected_items[0])['values'][2] # Usuario está en la 3a columna (índice 2)
+        username = tree.item(selected_items[0])['values'][1] # Usuario está en la 3a columna (índice 2)
         
         if user_controller.handle_deactivate_user(username):
             _load_initial_data()
