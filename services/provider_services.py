@@ -1,6 +1,6 @@
 # services/provider_service.py
 import mysql.connector
-from utils.db_connection import conectar_db # Asegúrate que tu conexión a la DB está en utils/database.py
+from utils.db_connection import conectar_db 
 
 def add_provider(nombre, rif, telefono, direccion):
     """
@@ -21,7 +21,7 @@ def add_provider(nombre, rif, telefono, direccion):
         return (True, "Proveedor registrado correctamente.")
     except mysql.connector.Error as err:
         db.rollback()
-        if err.errno == 1062: # Error de RIF duplicado
+        if err.errno == 1062: 
             return (False, f"El RIF '{rif}' ya está registrado. Verifique los datos.")
         return (False, f"Error al registrar proveedor: {err}")
     finally:

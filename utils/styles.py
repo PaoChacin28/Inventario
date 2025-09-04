@@ -43,12 +43,12 @@ def configure_styles(window):
     style.configure('Treeview', rowheight=25, font=('Arial', 10))
     style.configure('Treeview.Heading', font=('Arial', 11, 'bold'))
     
-    # --- ESTILOS NUEVOS Y CORREGIDOS ---
     
-    # Estilo para LabelFrame con título en negrita (el que causaba el error)
+    
+    # Estilo para LabelFrame con título en negrita 
     # Define el estilo para el marco del LabelFrame
     style.configure('Bold.TLabelFrame', background='#ffffff', borderwidth=1, relief="groove")
-    # Define el estilo para la ETIQUETA (el texto) del LabelFrame
+    # Define el estilo para el texto del LabelFrame
     style.configure('Bold.TLabelFrame.Label', 
                     font=("Arial", 11, "bold"),
                     background='#ffffff',

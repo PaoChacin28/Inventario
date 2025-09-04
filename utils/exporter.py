@@ -9,13 +9,13 @@ from datetime import datetime
 from fpdf import FPDF
 from utils.validation import resource_path
 
-# --- NUEVAS IMPORTACIONES PARA REPORTLAB ---
+
 from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Image
 from reportlab.lib.styles import getSampleStyleSheet
 from reportlab.lib.units import inch
 from reportlab.lib.pagesizes import letter
 
-# --- CLASES PDF (sin cambios) ---
+
 class PDF(FPDF):
     def header(self):
         self.set_font('Arial', 'B', 12);
@@ -39,7 +39,7 @@ class ManualPDF(FPDF):
         self.set_font('Arial', 'I', 8)
         self.cell(0, 10, f'Página {self.page_no()} | Sistema de Inventario JPG', 0, 0, 'C')
         
-# --- FUNCIONES DE GENERACIÓN CORREGIDAS ---
+
 
 def generate_report_pdf_data(data_list, headers, report_title):
     """Genera los datos binarios de un PDF tabular (Reportes)."""
@@ -62,7 +62,6 @@ def generate_report_pdf_data(data_list, headers, report_title):
                 pdf.cell(cell_width, 10, value, 1, 0, 'L')
             pdf.ln()
             
-        # pdf.output() ya devuelve bytes, no necesitamos codificarlo de nuevo.
         return pdf.output(dest='S')
         
     except Exception as e:
@@ -141,21 +140,21 @@ def export_manual_with_reportlab(manual_text, title='Manual de Usuario'):
     
     
     
-# --- LÓGICA DE VISUALIZACIÓN Y GUARDADO (SIN CAMBIOS) ---
+
 def preview_pdf_from_data(pdf_data):
-    # ... (Esta función está correcta y no necesita cambios)
+    
     if not pdf_data: messagebox.showwarning("Sin Datos", "No hay datos para visualizar."); return
     try:
         temp_filepath = os.path.join(tempfile.gettempdir(), f"preview_{datetime.now().strftime('%Y%m%d_%H%M%S')}.pdf")
         with open(temp_filepath, 'wb') as f:
             f.write(pdf_data)
         webbrowser.open(f'file://{os.path.realpath(temp_filepath)}')
-        messagebox.showinfo("Vista Previa", "El PDF se ha abierto en su visor predeterminado.")
+        #messagebox.showinfo("Vista Previa", "El PDF se ha abierto en su visor predeterminado.")
     except Exception as e:
         messagebox.showerror("Error de Vista Previa", f"No se pudo abrir el PDF:\n{e}")
 
 def save_pdf_from_data(pdf_data, default_filename='documento'):
-    # ... (Esta función está correcta y no necesita cambios)
+
     if not pdf_data: messagebox.showwarning("Sin Datos", "No hay datos para guardar."); return
     filename_suggestion = f"{default_filename}_{datetime.now().strftime('%Y%m%d')}.pdf"
     filepath = filedialog.asksaveasfilename(

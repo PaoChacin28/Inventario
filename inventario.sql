@@ -1,10 +1,14 @@
 -- ====================================================================
--- SCRIPT DE REINICIO TOTAL Y POBLACIÓN DE DATOS (VERSIÓN FINAL)
+-- SCRIPT DE REINICIO TOTAL Y POBLACIÓN DE DATOS 
 -- ====================================================================
 
 DROP DATABASE IF EXISTS inventario;
 CREATE DATABASE inventario;
 USE inventario;
+
+-- ====================================================================
+-- ESTRUCTURA DE TABLAS
+-- ====================================================================
 
 CREATE TABLE usuario (
     id_usuario INT PRIMARY KEY AUTO_INCREMENT,
@@ -76,3 +80,20 @@ CREATE TABLE reporte (
     FOREIGN KEY (id_usuario) REFERENCES usuario(id_usuario) 
 );
 
+-- ====================================================================
+-- POBLACIÓN DE DATOS INICIAL
+-- ====================================================================
+
+-- Creación del usuario administrador por defecto
+INSERT INTO usuario (nombre_completo, usuario, contrasena, rol) 
+VALUES ('Administrador Principal', 'admin', 'Admin123', 'Administrador');
+
+-- Puedes añadir más datos iniciales aquí si lo deseas (ej. proveedores, productos)
+
+-- Ejemplo de inserción de un proveedor
+-- INSERT INTO proveedor (nombre, rif, telefono, direccion) 
+-- VALUES ('Proveedor de Carnes C.A.', 'J-12345678-9', '0412-1234567', 'Dirección del proveedor');
+
+-- Ejemplo de inserción de un producto
+-- INSERT INTO producto (codigo_producto, nombre, tipo)
+-- VALUES ('CAR-001', 'Bistec de Solomo', 'Carnicos');

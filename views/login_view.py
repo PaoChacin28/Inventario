@@ -5,10 +5,9 @@ from tkinter import messagebox, ttk
 from PIL import Image, ImageTk
 import mysql.connector
 
-# Importaciones de módulos del proyecto
 from utils.db_connection import conectar_db
 from utils import styles
-from utils.validation import resource_path # Para la ruta segura de las imágenes
+from utils.validation import resource_path 
 from views import main_view
 
 def _verify_credentials(username, password):

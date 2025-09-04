@@ -17,22 +17,16 @@ def show_register_product_form(parent_frame):
     clear_frame(parent_frame)
     ttk.Label(parent_frame, text="Registrar Nuevo Producto", style='ContentTitle.TLabel').pack(pady=20)
     
-    # --- PATRÓN DE CENTRADO EXACTO DE TUS OTROS FORMULARIOS ---
-    
-    # 1. El 'form_frame' principal que usará grid.
+
     form_frame = ttk.Frame(parent_frame, style='MainContent.TFrame')
     form_frame.pack(padx=20, pady=10, fill="x", anchor="n")
     form_frame.columnconfigure(0, weight=1) # Columna central expansiva
 
-    # 2. El 'fields_container' con ancho fijo que se centrará en la grilla.
     fields_container = ttk.Frame(form_frame, style='MainContent.TFrame')
     fields_container.grid(row=0, column=0, sticky="n", ipadx=150)
 
-    # 3. El 'button_frame' que también se centrará en la grilla.
     button_frame = ttk.Frame(form_frame, style='MainContent.TFrame')
     button_frame.grid(row=1, column=0, pady=20)
-
-    # De aquí en adelante, todo el contenido se coloca en los contenedores correspondientes.
 
     # --- Sección de Datos del Producto ---
     ttk.Label(fields_container, text="Datos del Producto", font=("Arial", 11, "bold")).pack(anchor="w", pady=(10,0))
@@ -51,7 +45,7 @@ def show_register_product_form(parent_frame):
         entries[key] = widget
 
     # --- Sección de Asociación de Proveedores ---
-    ttk.Label(fields_container, text="Asociar Proveedores (Opcional)", font=("Arial", 11, "bold")).pack(anchor="w", pady=(20,0))
+    ttk.Label(fields_container, text="Asociar Proveedores", font=("Arial", 11, "bold")).pack(anchor="w", pady=(20,0))
     ttk.Separator(fields_container, orient='horizontal').pack(fill='x', pady=(2, 10))
     
     provider_widgets_container = ttk.Frame(fields_container)
@@ -112,7 +106,7 @@ def show_edit_product_form(parent_frame, product_code):
     """Dibuja el formulario de gestión completa para editar un producto, centrado y sin scroll."""
     clear_frame(parent_frame)
     
-    # --- 1. CARGA DE DATOS INICIAL (sin cambios) ---
+
     product_data = product_controller.handle_find_product(product_code)
     if not product_data:
         messagebox.showerror("Error", f"No se pudieron cargar los datos para el producto '{product_code}'.")
@@ -124,23 +118,18 @@ def show_edit_product_form(parent_frame, product_code):
     provider_map = {p['nombre']: p['id_proveedor'] for p in all_providers_list}
     all_provider_names = sorted(list(provider_map.keys()))
 
-    # --- 2. LAYOUT CENTRADO ESTÁNDAR (SIN SCROLL) ---
     ttk.Label(parent_frame, text=f"Editando Producto: {product_data['nombre']}", style='ContentTitle.TLabel').pack(pady=20)
-    
-    # El 'form_frame' principal que usará grid para centrar su contenido.
+
     form_frame = ttk.Frame(parent_frame, style='MainContent.TFrame')
     form_frame.pack(padx=20, pady=10, fill="x", anchor="n")
     form_frame.columnconfigure(0, weight=1) # Columna central expansiva
 
-    # El 'fields_container' con ancho fijo que se centrará.
     fields_container = ttk.Frame(form_frame, style='MainContent.TFrame')
     fields_container.grid(row=0, column=0, sticky="n", ipadx=150)
 
-    # El 'button_frame' que también se centrará.
     button_frame = ttk.Frame(form_frame, style='MainContent.TFrame')
     button_frame.grid(row=1, column=0, pady=20)
 
-    # --- 3. SECCIÓN DE DATOS DEL PRODUCTO (Precargada) ---
     ttk.Label(fields_container, text="Datos del Producto", font=("Arial", 11, "bold")).pack(anchor="w", pady=(10,0))
     ttk.Separator(fields_container, orient='horizontal').pack(fill='x', pady=(2, 10))
 
@@ -161,7 +150,7 @@ def show_edit_product_form(parent_frame, product_code):
         widget.pack(fill="x")
         entries[key] = widget
 
-    # --- 4. SECCIÓN DE GESTIÓN DE PROVEEDORES (Precargada) ---
+
     ttk.Label(fields_container, text="Gestionar Proveedores Asociados", font=("Arial", 11, "bold")).pack(anchor="w", pady=(20,0))
     ttk.Separator(fields_container, orient='horizontal').pack(fill='x', pady=(2, 10))
     
@@ -221,7 +210,6 @@ def show_edit_product_form(parent_frame, product_code):
         ):
             show_all_products_list(parent_frame)
 
-    # --- 5. BOTONES DE ACCIÓN (en su frame centrado) ---
     ttk.Button(button_frame, text="Actualizar Producto", command=actualizar_todo_action, style='Action.TButton').pack(side='left', padx=5)
     ttk.Button(button_frame, text="Cancelar", command=lambda: show_all_products_list(parent_frame), style='Delete.TButton').pack(side='left', padx=5)
     
@@ -235,7 +223,6 @@ def show_product_lots_details(parent_frame, product_data):
 
     ttk.Label(parent_frame, text=f"Lotes para: {product_name}", style='ContentTitle.TLabel').pack(pady=10)
     
-    # Se usa el layout de 3 partes para asegurar que la tabla sea ajustable
     bottom_frame = ttk.Frame(parent_frame, style='MainContent.TFrame')
     bottom_frame.pack(side='bottom', fill='x', padx=10, pady=10)
     
@@ -312,7 +299,7 @@ def show_all_products_list(parent_frame):
     """Dibuja la vista principal de productos con layout ajustable."""
     clear_frame(parent_frame)
     
-    # Layout de 3 partes
+    
     top_frame = ttk.Frame(parent_frame, style='MainContent.TFrame')
     top_frame.pack(side='top', fill='x', padx=10, pady=10)
 
@@ -322,7 +309,7 @@ def show_all_products_list(parent_frame):
     container = ttk.Frame(parent_frame, style='MainContent.TFrame')
     container.pack(fill="both", expand=True, padx=10)
 
-    # Contenido de la parte superior
+
     ttk.Label(top_frame, text="Gestión de Productos", style='ContentTitle.TLabel').pack(pady=10)
     search_bar_frame = ttk.Frame(top_frame, style='MainContent.TFrame')
     search_bar_frame.pack(fill='x', pady=5)
@@ -331,7 +318,6 @@ def show_all_products_list(parent_frame):
     search_entry = ttk.Entry(search_bar_frame, textvariable=search_var)
     search_entry.pack(side='left', fill='x', expand=True)
 
-    # Contenido de la parte central (tabla)
     cols = ("Código", "Nombre", "Tipo", "Stock Total")
     tree = ttk.Treeview(container, columns=cols, show="headings", selectmode="browse")
     vsb = ttk.Scrollbar(container, orient="vertical", command=tree.yview)

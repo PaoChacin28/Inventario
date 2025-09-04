@@ -20,7 +20,7 @@ def add_user(nombre_completo, usuario, contrasena, rol):
         return (True, f"Usuario '{usuario}' registrado correctamente.")
     except mysql.connector.Error as err:
         db.rollback()
-        if err.errno == 1062: # Error de entrada duplicada
+        if err.errno == 1062: 
             return (False, f"El nombre de usuario '{usuario}' ya existe.")
         return (False, f"Error al registrar usuario: {err}")
     finally:

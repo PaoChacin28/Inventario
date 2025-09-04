@@ -14,26 +14,38 @@ def clear_frame(frame):
 def show_generate_report_form(parent_frame, user_id):
     clear_frame(parent_frame)
     
-    # --- LAYOUT DE 3 PARTES (SIN CAMBIOS) ---
+    COLUMN_MAPPING = {
+        'fecha': 'Fecha y Hora',
+        'producto_nombre': 'Nombre del Producto',
+        'tipo': 'Tipo',
+        'tag_lote': 'Etiqueta de Lote',
+        'cantidad': 'Cantidad',
+        'descripcion': 'Descripción',
+        'usuario_nombre': 'Usuario Responsable',
+        'codigo_producto': 'Código',
+        'nombre': 'Producto',
+        'stock_total': 'Stock Actual',
+        'unidad_medida': 'Unidad',
+        'fecha_vencimiento': 'Vencimiento',
+        'fecha_ingreso': 'Fecha de Ingreso',
+        'cantidad_inicial': 'Cant. Inicial'
+    }
+
     control_frame = ttk.Frame(parent_frame, style='MainContent.TFrame')
     control_frame.pack(side='top', fill='x', padx=10, pady=(10, 0))
 
     bottom_frame = ttk.Frame(parent_frame, style='MainContent.TFrame')
     bottom_frame.pack(side='bottom', fill='x', padx=10, pady=10)
-    
-    # --- SOLUCIÓN: El contenedor de la tabla y el HSB van juntos ---
-    # Esto asegura que el HSB esté directamente debajo de la tabla que controla
+
     table_container = ttk.Frame(parent_frame, style='MainContent.TFrame')
     table_container.pack(fill="both", expand=True, padx=10, pady=10)
 
-    # --- CONTENIDO DE LA SECCIÓN SUPERIOR (SIN CAMBIOS) ---
-    # ... (Todo tu código para el título, combobox y filtros va aquí) ...
     ttk.Label(control_frame, text="Generar Reportes", style='ContentTitle.TLabel').pack(pady=(10, 20))
     field_container = ttk.Frame(control_frame, style='MainContent.TFrame')
     field_container.pack(pady=10)
     ttk.Label(field_container, text="Tipo de Reporte", style='ContentLabel.TLabel').pack(anchor="w")
     report_types = ["Stock General", "Stock Mínimo", "Próximos a Vencer", "Movimientos por Fecha", 
-                    "Trazabilidad de Lote", "Movimientos por Producto", "Entradas por Proveedor"]
+                    "Trazabilidad de Lote", "Movimientos por Producto"]
     type_combobox = ttk.Combobox(field_container, values=report_types, state="readonly", width=50)
     type_combobox.set(report_types[0])
     type_combobox.pack(fill="x", pady=(2, 10))
@@ -57,39 +69,29 @@ def show_generate_report_form(parent_frame, user_id):
         products_list = report_controller.get_products_for_selection() or []
         product_map = {f"{p.get('codigo_producto', p['id_producto'])} - {p['nombre']}": p['id_producto'] for p in products_list}
         product_combo = ttk.Combobox(product_filter_frame, values=list(product_map.keys()), state="readonly", width=50); product_combo.pack(fill='x')
-        provider_filter_frame = ttk.Frame(filters_frame, style='MainContent.TFrame')
-        ttk.Label(provider_filter_frame, text="Proveedor:").pack(anchor='w'); 
-        providers_list = report_controller.get_providers_for_selection() or []
-        provider_map = {p['nombre']: p['id_proveedor'] for p in providers_list}
-        provider_combo = ttk.Combobox(provider_filter_frame, values=list(provider_map.keys()), state="readonly", width=50); provider_combo.pack(fill='x')
+        
     except Exception:
         traceback.print_exc()
         messagebox.showerror("Error de Carga", "No se pudieron cargar los datos para los filtros. Revise la consola.")
         return
     def on_report_type_change(event):
-        for frame in [date_filter_frame, lot_filter_frame, product_filter_frame, provider_filter_frame]: frame.pack_forget()
+        for frame in [date_filter_frame, lot_filter_frame, product_filter_frame]: frame.pack_forget()
         selected = type_combobox.get()
-        if selected in ["Movimientos por Fecha", "Movimientos por Producto", "Entradas por Proveedor"]: date_filter_frame.pack(fill='x', pady=5)
+        if selected in ["Movimientos por Fecha", "Movimientos por Producto"]: date_filter_frame.pack(fill='x', pady=5)
         if selected == "Trazabilidad de Lote": lot_filter_frame.pack(fill='x', pady=5)
         if selected == "Movimientos por Producto": product_filter_frame.pack(fill='x', pady=5)
-        if selected == "Entradas por Proveedor": provider_filter_frame.pack(fill='x', pady=5)
     type_combobox.bind("<<ComboboxSelected>>", on_report_type_change)
 
-    # --- SECCIÓN INFERIOR Y CENTRAL ---
-
-    # El frame de botones va en la sección inferior
     action_frame = ttk.Frame(bottom_frame, style='MainContent.TFrame')
     action_frame.pack(pady=(5,0))
-    
-    # Creamos el HSB DENTRO del nuevo 'table_container'
+
     hsb = ttk.Scrollbar(table_container, orient="horizontal")
     hsb.pack(side='bottom', fill='x')
 
-    # La tabla y el VSB también van DENTRO del 'table_container'
     tree = ttk.Treeview(table_container, show="headings", xscrollcommand=hsb.set)
     vsb = ttk.Scrollbar(table_container, orient="vertical", command=tree.yview)
-    tree.configure(yscrollcommand=vsb.set)
-    hsb.config(command=tree.xview)
+    tree.configure(yscrollcommand=vsb.set )
+    
     
     vsb.pack(side="right", fill="y")
     tree.pack(side="left", fill="both", expand=True)
@@ -98,12 +100,12 @@ def show_generate_report_form(parent_frame, user_id):
         nonlocal report_data, report_headers
         selected_report = type_combobox.get()
         params = {}
-        # ... (código de recolección de params) ...
-        if selected_report in ["Movimientos por Fecha", "Movimientos por Producto", "Entradas por Proveedor"]:
+        
+        if selected_report in ["Movimientos por Fecha", "Movimientos por Producto"]:
             params = {'start_date': start_date_entry.get_date(), 'end_date': end_date_entry.get_date()}
         if selected_report == "Trazabilidad de Lote": params['lote_id'] = lot_map.get(lot_combo.get())
         if selected_report == "Movimientos por Producto": params['product_id'] = product_map.get(product_combo.get())
-        if selected_report == "Entradas por Proveedor": params['provider_id'] = provider_map.get(provider_combo.get())
+
         
         report_data = report_controller.get_report_data(selected_report, params)
         for i in tree.get_children(): tree.delete(i)
@@ -112,13 +114,16 @@ def show_generate_report_form(parent_frame, user_id):
         save_button.config(state="disabled")
 
         if report_data:
-            report_headers = {k: k.replace('_', ' ').title() for k in report_data[0].keys()}
+            report_headers = {
+                key: COLUMN_MAPPING.get(key, key.replace('_', ' ').title()) 
+                for key in report_data[0].keys()
+            }
             tree['columns'] = list(report_headers.keys())
             tree.column("#0", width=0, stretch=tk.NO)
 
-            # --- LÓGICA DE COLUMNAS RESTAURADA Y CORRECTA ---
+            
             # Identificamos las columnas que queremos que sean flexibles
-            flexible_columns = ['Producto Nombre', 'Descripcion', 'Usuario Nombre', 'Nombre']
+            flexible_columns = ['Nombre del Producto', 'Descripción', 'Usuario Responsable', 'Producto']
 
             for key, name in report_headers.items():
                 tree.heading(key, text=name)

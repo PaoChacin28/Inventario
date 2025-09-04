@@ -120,9 +120,8 @@ def show_all_providers_list(parent_frame):
 
     action_frame = ttk.Frame(parent_frame, style='MainContent.TFrame')
     action_frame.pack(side='bottom', pady=(5,0), fill='x')
-    hsb = ttk.Scrollbar(parent_frame, orient="horizontal", command=tree.xview)
-    hsb.pack(side='bottom', fill='x', padx=10, pady=(0, 5))
-    tree.configure(yscrollcommand=vsb.set, xscrollcommand=hsb.set)
+    
+    tree.configure(yscrollcommand=vsb.set)
     
     all_providers = []
 
@@ -162,14 +161,14 @@ def show_all_providers_list(parent_frame):
             return
         
         selected_item = selected_items[0]
-        # El RIF es el valor en la tercera columna (índice 2)
+        
         provider_rif = tree.item(selected_item)['values'][1]
         
         # Llamamos al controlador. Él se encargará de pedir confirmación y mostrar mensajes.
         # Si la operación fue exitosa (el controlador devuelve True), recargamos la lista.
         if provider_controller.handle_deactivate_provider(provider_rif):
             _load_initial_data()
-# --- BOTÓN CORREGIDO ---
+
     ttk.Button(action_frame, text="Añadir Nuevo Proveedor", command=on_add_record, style='Action.TButton').pack(side='left', padx=10)
     ttk.Button(action_frame, text="Desincorporar Seleccionado", command=on_deactivate_record, style='Delete.TButton').pack(side='right', padx=10)
     ttk.Button(action_frame, text="Editar Seleccionado", command=on_edit_record, style='Action.TButton').pack(side='right')

@@ -8,7 +8,7 @@ def handle_export_manual_as_pdf(manual_text):
     Orquesta la generación del manual usando la nueva función de ReportLab.
     """
     try:
-        # --- CORRECCIÓN DEFINITIVA ---
+        
         # Llamamos a la nueva función que SÍ existe: 'export_manual_with_reportlab'
         exporter.export_manual_with_reportlab(manual_text, title='Manual de Usuario del Sistema')
         

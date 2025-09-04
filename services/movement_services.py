@@ -95,7 +95,6 @@ def register_exit_movement(id_lote, cantidad_salida, user_id):
         lote = cursor.fetchone()
         if not lote: return (False, "El lote seleccionado no existe.")
         
-        # --- CORRECCIÓN DE TIPO ---
         cantidad_actual_decimal = lote['cantidad_actual']
         cantidad_salida_decimal = Decimal(str(cantidad_salida))
 
@@ -131,7 +130,7 @@ def register_adjustment_movement(id_lote, nueva_cantidad_ajuste, user_id, descri
         lote = cursor.fetchone()
         if not lote: return (False, "El lote seleccionado no existe.")
         
-        # --- CAMBIO FUNDAMENTAL EN LA LÓGICA DE AJUSTE ---
+        
         
         # 1. Convertimos a Decimal para precisión
         cantidad_actual_decimal = lote['cantidad_actual']
@@ -142,9 +141,7 @@ def register_adjustment_movement(id_lote, nueva_cantidad_ajuste, user_id, descri
             # Esta es una doble validación, por si acaso la del controlador falla.
             return (False, "El valor de ajuste no puede ser negativo.")
             
-        # 3. Calculamos la DIFERENCIA para guardarla en la tabla de movimientos (para auditoría)
-        #    Ejemplo: Si stock era 3 y el ajuste es 10, el movimiento fue de +7.
-        #    Ejemplo: Si stock era 15 y el ajuste es 5, el movimiento fue de -10.
+        # 3. Calculamos la DIFERENCIA para guardarla en la tabla de movimientos 
         cantidad_para_movimiento = nueva_cantidad_decimal - cantidad_actual_decimal
         
         # 4. Actualizamos el lote con el nuevo valor absoluto
@@ -174,7 +171,7 @@ def get_all_movements_with_details():
     if not db: return []
     cursor = db.cursor(dictionary=True)
     try:
-        # --- CORRECCIÓN CLAVE EN LA CONSULTA SQL ---
+        
         sql = """
             SELECT 
                 m.id_movimiento, m.fecha, m.tipo, m.cantidad, m.descripcion,

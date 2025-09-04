@@ -110,21 +110,40 @@ def get_movements_by_product(product_id, start_date, end_date):
     finally:
         if db.is_connected(): cursor.close(); db.close()
 
-def get_entries_by_provider(provider_id, start_date, end_date):
-    """Obtiene todas las entradas (lotes) asociadas a productos de un proveedor específico en un rango de fechas."""
+def get_inventory_turnover_report(start_date, end_date, product_id=None):
+    """
+    Calcula la rotación de inventario (total de salidas) para uno o todos los productos en un rango de fechas.
+    """
     db = conectar_db()
     if not db: return []
     cursor = db.cursor(dictionary=True)
+    
+    # Preparamos la consulta base
+    sql = """
+        SELECT 
+            p.codigo_producto,
+            p.nombre,
+            p.tipo,
+            IFNULL(SUM(m.cantidad), 0) AS total_salidas,
+            (SELECT SUM(l.cantidad_actual) FROM lote l WHERE l.id_producto = p.id_producto AND l.cantidad_actual > 0) AS stock_actual
+        FROM producto p
+        LEFT JOIN movimiento m ON p.id_producto = m.id_producto AND m.tipo = 'Salida' AND DATE(m.fecha) BETWEEN %s AND %s
+        WHERE p.estado = 'Activo'
+    """
+    params = [start_date, end_date]
+
+    # Si se especificó un producto, añadimos un filtro a la consulta
+    if product_id:
+        sql += " AND p.id_producto = %s"
+        params.append(product_id)
+        
+    sql += """
+        GROUP BY p.id_producto, p.nombre, p.tipo
+        ORDER BY total_salidas DESC;
+    """
+    
     try:
-        sql = """
-            SELECT l.fecha_ingreso, p.nombre as producto_nombre, l.tag_lote, l.cantidad_inicial, l.unidad_medida, l.fecha_vencimiento
-            FROM lote l
-            JOIN producto p ON l.id_producto = p.id_producto
-            JOIN producto_proveedor pp ON p.id_producto = pp.id_producto
-            WHERE pp.id_proveedor = %s AND l.fecha_ingreso BETWEEN %s AND %s
-            ORDER BY l.fecha_ingreso DESC
-        """
-        cursor.execute(sql, (provider_id, start_date, end_date))
+        cursor.execute(sql, tuple(params))
         return cursor.fetchall()
     finally:
         if db.is_connected(): cursor.close(); db.close()
@@ -137,7 +156,7 @@ def get_full_stock_report_data():
     if not db: return []
     cursor = db.cursor(dictionary=True)
     try:
-        # Esta consulta es similar a la de stock mínimo, pero sin el filtro HAVING.
+        
         sql = """
             SELECT p.codigo_producto, p.nombre, p.tipo,
                    IFNULL(SUM(l.cantidad_actual), 0) AS stock_total,

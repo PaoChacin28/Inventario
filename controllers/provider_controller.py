@@ -51,14 +51,14 @@ def handle_get_all_providers():
 def handle_deactivate_provider(rif):
     """Maneja la desactivación de un proveedor."""
     if not rif:
-        # Esto no debería ocurrir si se selecciona de la tabla, pero es una buena práctica
+        
         messagebox.showwarning("Error", "No se ha proporcionado un RIF.")
         return False
         
     if not messagebox.askyesno("Confirmar Desactivación", f"¿Está seguro de que desea desactivar al proveedor con RIF '{rif}'?\nYa no podrá ser usado en operaciones nuevas."):
         return False
 
-    # Llamada a la función correcta del servicio
+    
     success, message = provider_service.deactivate_provider_by_rif(rif)
     
     if success:

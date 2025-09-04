@@ -133,9 +133,8 @@ def show_all_users_list(parent_frame):
 
     action_frame = ttk.Frame(parent_frame, style='MainContent.TFrame')
     action_frame.pack(side='bottom', pady=(5,0), fill='x')
-    hsb = ttk.Scrollbar(parent_frame, orient="horizontal", command=tree.xview)
-    hsb.pack(side='bottom', fill='x', padx=10, pady=(0, 5))
-    tree.configure(yscrollcommand=vsb.set, xscrollcommand=hsb.set)
+    
+    tree.configure(yscrollcommand=vsb.set)
     
     all_users = []
 

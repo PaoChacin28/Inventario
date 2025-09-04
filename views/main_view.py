@@ -108,10 +108,10 @@ def create_main_menu_window(rol, user_id, login_window_ref, login_action_ref, cl
         add_menu_button("Reportes", navigate_to_reports)
         add_menu_button("Manual de Usuario", lambda: help_view.show_full_manual_in_frame(content_frame))
 
-    # NOTA: Asegúrate de que tu help_view tenga una función show_help_manual (o renómbrala a show_help_popup)
+    
     add_menu_button("Ayuda", lambda: help_view.show_help_manual(main_window))
     
-    # --- CAMBIO 2: LÓGICA DE CIERRE DE SESIÓN ACTUALIZADA ---
+    
     def logout_action():
         main_window.destroy()
         
@@ -126,6 +126,6 @@ def create_main_menu_window(rol, user_id, login_window_ref, login_action_ref, cl
     
     add_menu_button("Cerrar Sesión", logout_action)
 
-    # --- Estado Inicial ---
+    
     _show_welcome_screen(rol)
     main_window.protocol("WM_DELETE_WINDOW", logout_action)

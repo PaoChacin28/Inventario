@@ -8,7 +8,7 @@ def is_valid_rif(rif_string):
     Valida el formato de un RIF venezolano (ej. J-12345678-9).
     Acepta J, V, E, G.
     """
-    # ^: inicio de la cadena, [JVEG]: una de estas letras, -: guión, \d{8}: 8 dígitos, \d{1}: 1 dígito, $: fin de la cadena
+    
     pattern = re.compile(r"^[JVEG]-\d{8}-\d{1}$")
     return pattern.match(rif_string) is not None
 
@@ -25,11 +25,7 @@ def is_valid_lote_tag(tag_string):
     Valida un formato de tag de lote (ej. 21JR086).
     Formato: AAPPXXXX (Año, Productor, Secuencial)
     """
-    # ^: Inicio
-    # \d{2}: Exactamente 2 dígitos para el año (AA)
-    # [A-Z]{2}: Exactamente 2 letras mayúsculas para el productor (PP)
-    # \d{1,4}: De 1 a 4 dígitos para el secuencial (XXXX)
-    # $: Fin
+    
     pattern = re.compile(r"^\d{2}[A-Z]{2}\d{1,4}$")
     return pattern.match(tag_string) is not None
 
@@ -55,7 +51,7 @@ def is_valid_password(password_string):
     # Si pasa todas las comprobaciones, es válida
     return True
 
-# --- AÑADE ESTA NUEVA FUNCIÓN ---
+
 def resource_path(relative_path):
     """ Obtiene la ruta absoluta a un recurso, funciona para desarrollo y para el .exe de PyInstaller """
     try:

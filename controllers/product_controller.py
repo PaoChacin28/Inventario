@@ -18,19 +18,19 @@ def handle_add_product(data):
     """
     validated_data = _validate_product_definition(data)
     if not validated_data:
-        # La validación ya muestra un messagebox si falla
+        
         return (False, None)
-    # --- NUEVA VALIDACIÓN DE FORMATO ---
+    #VALIDACIÓN DE FORMATO
     if not validation.is_valid_product_code(data['codigo_producto']):
         messagebox.showerror("Formato Incorrecto", "El formato del Código de Producto es inválido.\nEjemplo: CAR-001")
         return (False, None)
-    # ------------------------------------
+    
     
     # El servicio 'add_product' devuelve (True, nuevo_id)
     success, result = product_service.add_product(**validated_data)
     
     if success:
-        # No mostramos messagebox aquí, la vista se encargará del mensaje final
+        
         return (True, result) # Retornamos True y el nuevo ID del producto
     else:
         # Si el servicio falla, sí mostramos el error
@@ -89,7 +89,7 @@ def handle_associate_provider(product_id, provider_id):
         
     success, message = product_service.associate_provider_to_product(product_id, provider_id)
     
-    # Solo mostramos un error si no es un error de "duplicado", que es esperado.
+    
     if not success and "ya está asociado" not in message:
         messagebox.showerror("Error de Asociación", message)
         

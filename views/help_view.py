@@ -199,15 +199,6 @@ def show_full_manual_in_frame(parent_frame):
     
     ttk.Button(bottom_frame, text="Exportar en PDF", command=export_action, style='Action.TButton').pack(side='right')
 
-    #def preview_action():
-     #   help_controller.handle_preview_manual(FULL_MANUAL_TEXT)
-    
-    ##  help_controller.handle_save_manual(FULL_MANUAL_TEXT)
-    
-    #save_button = ttk.Button(bottom_frame, text="Guardar PDF", command=save_action, style='Search.TButton')
-    #save_button.pack(side='right')
-    #preview_button = ttk.Button(bottom_frame, text="Visualizar PDF", command=preview_action, style='Action.TButton')
-    #preview_button.pack(side='right', padx=(0, 10))
 
 def show_help_manual(main_window):
     """Crea y muestra una ventana Toplevel con el manual de usuario."""

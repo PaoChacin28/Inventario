@@ -18,7 +18,7 @@ def handle_get_lots_for_product(product_id):
 def handle_register_entry(data):
     """Valida y registra una nueva entrada de lote."""
     required = ['product_id', 'tag_lote', 'cantidad', 'unidad', 'user_id']
-    # --- CORRECCIÓN DE INDENTACIÓN ---
+    
     if any(not data.get(field) for field in required):
         messagebox.showwarning("Campos Incompletos", "Producto, Tag del Lote, Cantidad y Unidad son obligatorios.")
         return False
@@ -62,7 +62,7 @@ def handle_register_exit_or_adjustment(id_lote, cantidad_str, user_id, movement_
 
     try:
         cantidad = float(cantidad_str)
-        # --- CAMBIO EN LA VALIDACIÓN DE AJUSTE ---
+        
         if movement_type == 'Salida':
             if cantidad <= 0:
                 messagebox.showerror("Valor Inválido", "La cantidad para una Salida debe ser un número positivo.")
