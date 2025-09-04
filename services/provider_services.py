@@ -56,7 +56,7 @@ def get_all_providers():
         
     cursor = db.cursor(dictionary=True)
     try:
-        cursor.execute("SELECT * FROM proveedor ORDER BY nombre ASC")
+        cursor.execute("SELECT * FROM proveedor WHERE estado = 'Activo' ORDER BY nombre ASC")
         return cursor.fetchall()
     except mysql.connector.Error as err:
         print(f"Error al obtener todos los proveedores: {err}")

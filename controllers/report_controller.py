@@ -64,15 +64,22 @@ def get_providers_for_selection():
     return provider_service.get_providers_for_selection()
 
 # --- Funciones para el flujo de PDF (sin cambios) ---
-def preview_report_as_pdf(data, headers, title):
-    try:
-        return exporter.generate_and_preview_pdf(data, headers, title)
-    except Exception as e:
-        messagebox.showerror("Error de Controlador", f"No se pudo generar la vista previa del PDF.\n{e}")
-        return None
+def handle_preview_report(data, headers, title):
+    """
+    (CORREGIDO) Genera y visualiza un reporte en PDF usando las nuevas funciones.
+    """
+    # 1. Llama a la función que genera los datos del PDF en memoria
+    pdf_data = exporter.generate_report_pdf_data(data, headers, title)
+    
+    # 2. Llama a la función que previsualiza esos datos
+    exporter.preview_pdf_from_data(pdf_data)
 
-def save_previewed_pdf(temp_path, filename):
-    try:
-        exporter.save_pdf(temp_path, filename)
-    except Exception as e:
-        messagebox.showerror("Error de Controlador", f"No se pudo guardar el PDF.\n{e}")
+def handle_save_report(data, headers, title):
+    """
+    (CORREGIDO) Genera y guarda un reporte en PDF usando las nuevas funciones.
+    """
+    # 1. Llama a la función que genera los datos del PDF en memoria
+    pdf_data = exporter.generate_report_pdf_data(data, headers, title)
+    
+    # 2. Llama a la función que guarda esos datos
+    exporter.save_pdf_from_data(pdf_data, default_filename=title.replace(" ", "_"))

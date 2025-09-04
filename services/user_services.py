@@ -56,7 +56,7 @@ def get_all_users():
     
     cursor = db.cursor(dictionary=True)
     try:
-        sql = "SELECT id_usuario, nombre_completo, usuario, rol FROM usuario ORDER BY nombre_completo ASC"
+        sql = "SELECT id_usuario, nombre_completo, usuario, rol FROM usuario WHERE estado = 'Activo' ORDER BY nombre_completo ASC"
         cursor.execute(sql)
         return cursor.fetchall()
     except mysql.connector.Error as err:

@@ -22,12 +22,17 @@ def is_valid_product_code(code_string):
 
 def is_valid_lote_tag(tag_string):
     """
-    Valida un formato de tag de lote (ej. LOTE-QUESO-250815).
-    Permite letras, números y guiones.
+    Valida un formato de tag de lote (ej. 21JR086).
+    Formato: AAPPXXXX (Año, Productor, Secuencial)
     """
-    # \w: cualquier caracter alfanumérico (letras, números, _)
-    pattern = re.compile(r"^[\w-]+$")
+    # ^: Inicio
+    # \d{2}: Exactamente 2 dígitos para el año (AA)
+    # [A-Z]{2}: Exactamente 2 letras mayúsculas para el productor (PP)
+    # \d{1,4}: De 1 a 4 dígitos para el secuencial (XXXX)
+    # $: Fin
+    pattern = re.compile(r"^\d{2}[A-Z]{2}\d{1,4}$")
     return pattern.match(tag_string) is not None
+
 
 def is_valid_password(password_string):
     """
@@ -61,3 +66,4 @@ def resource_path(relative_path):
         base_path = os.path.abspath(".")
 
     return os.path.join(base_path, relative_path)
+

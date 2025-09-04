@@ -50,12 +50,13 @@ Estas secciones solo son visibles para usuarios con el rol "Administrador".
 # --- TEXTO PARA LA SECCIÓN 'MANUAL DE USUARIO' ---
 FULL_MANUAL_TEXT = """
 Sistema de Control de Inventario para Frigorífico JPG, F.P.
-Versión 1.0
+
 
 -----------------------------------------------------------------------------------------------------------------
 1. INTRODUCCIÓN
 -----------------------------------------------------------------------------------------------------------------
 Bienvenido al Manual de Usuario del Sistema de Control de Inventario del Frigorífico JPG, F.P. Este documento ha sido diseñado para guiarlo a través de todas las funcionalidades de la aplicación, desde la instalación y el primer acceso hasta la ejecución de las operaciones diarias de gestión de inventario.
+El objetivo de este sistema es proporcionar una herramienta robusta, intuitiva y segura para la trazabilidad completa de los productos, optimizando el control del stock y facilitando la toma de decisiones.
 
 -----------------------------------------------------------------------------------------------------------------
 2. REQUERIMIENTOS DEL SISTEMA
@@ -89,7 +90,7 @@ La puesta en marcha del sistema consta de dos pasos sencillos: la configuración
 
 3.1. Configuración de la Base de Datos (Paso único)
 -Asegúrese de tener un servidor MySQL instalado y funcionando.
--Utilizando un cliente de base de datos (HeidiSQL, DBeaver, etc.), ejecute el archivo `inventario.sql` proporcionado. Este script creará la base de datos, las tablas y los datos iniciales necesarios.
+-Utilizando un cliente de base de datos, ejecute el archivo `inventario.sql` proporcionado. Este script creará la base de datos, las tablas y los datos iniciales necesarios.
 
 3.2. Acceso a la Aplicación
 El sistema se distribuye como una carpeta que contiene un archivo ejecutable.
@@ -114,26 +115,31 @@ Haga clic en el botón "Iniciar Sesión" o presione la tecla Enter para acceder.
 El menú lateral contiene todos los módulos de la aplicación.
 
 5.1. Módulo de Productos
-Gestión del catálogo. Muestra una lista de productos con su stock total. Permite Añadir, Editar, Desactivar, Ver Lotes y Ver Proveedores.
+Es el catálogo central. Muestra una lista de todos los productos activos con su stock total.
+•	Añadir Producto: Abre un formulario para definir un nuevo producto (código, nombre, tipo) y asociarle uno o más proveedores.
+•	Editar Seleccionado: Abre un formulario de gestión completo para modificar el nombre, el tipo y la lista de proveedores asociados a un producto existente.
+•	Desincorporar Seleccionado: Oculta un producto de las listas activas, pero mantiene su historial.
+•	Ver Lotes: Muestra una tabla con todas las entregas (lotes) del producto seleccionado, incluyendo su stock individual.
+•	Ver Proveedores: Muestra una lista de los proveedores asociados a un producto.
 
 5.2. Módulo de Movimientos
-Centro de operaciones de inventario. La vista principal es el historial de todos los movimientos.
-- Registrar Movimiento: Abre un formulario dinámico:
-    - Entrada: Define un nuevo LOTE (tag, cantidad, etc.) para un producto.
-    - Salida: Descuenta stock de un LOTE existente.
-    - Ajuste: Establece un nuevo valor de stock para un LOTE.
+Es el centro de las operaciones de inventario. La vista principal es el historial de todos los movimientos.
+•	Registrar Nuevo Movimiento: Abre el formulario dinámico para:
+•	Entrada: Define un nuevo LOTE (tag, cantidad, etc.) para un producto.
+•	Salida: Descuenta stock de un LOTE existente.
+•	Ajuste: Establece un nuevo valor de stock para un LOTE (usado para corregir conteos o registrar mermas).
 
-5.3. Módulos de Administración (Solo rol "Administrador")
-- Usuarios: Gestiona las cuentas del sistema (Añadir, Editar, Desactivar).
-- Proveedores: Gestiona el catálogo de proveedores.
-- Reportes: Genera informes dinámicos y exportables a PDF.
-- Manual de Usuario: Muestra esta guía completa.
+5.3. Módulos de Administración (Solo para rol "Administrador")
+•	Usuarios: Permite gestionar las cuentas de usuario (Añadir, Editar, Desincorporar). Requiere que las contraseñas cumplan un formato de seguridad.
+•	Proveedores: Permite gestionar el catálogo de proveedores (Añadir, Editar, Desincorporar).
+•	Reportes: Genera informes dinámicos y exportables a PDF. El usuario genera el reporte en pantalla y luego puede exportar, lo que abre una vista previa en su lector de PDF predeterminado.
+•	Manual de Usuario: Muestra este documento completo dentro de la aplicación, con una opción para exportarlo a PDF.
 
 5.4. Módulo de Ayuda
-Muestra una ventana emergente con una guía rápida sobre el funcionamiento de los módulos.
+Muestra una ventana emergente con una guía rápida sobre el funcionamiento de los módulos principales. 
 
 5.5. Cerrar Sesión
-Finaliza la sesión actual y regresa a la pantalla de Inicio de Sesión.
+Finaliza la sesión actual y devuelve a la pantalla de Inicio de Sesión, listo para que otro usuario ingrese.
 
 -----------------------------------------------------------------------------------------------------------------
 6. MENSAJES DE ERROR COMUNES Y SU SIGNIFICADO
@@ -152,7 +158,6 @@ Finaliza la sesión actual y regresa a la pantalla de Inicio de Sesión.
 - Lote: Una entrega específica de un producto. Es la unidad básica del inventario para la trazabilidad.
 - Tag de Lote: El código único y obligatorio que se asigna a un lote para su identificación.
 - Movimiento de Ajuste: Operación que establece un nuevo valor de stock para un lote.
-- Desactivar (Borrado Lógico): Proceso de ocultar un registro sin eliminarlo, para mantener la integridad de los datos históricos.
 
 -----------------------------------------------------------------------------------------------------------------
 8. SOPORTE Y CONTACTO
@@ -160,7 +165,7 @@ Finaliza la sesión actual y regresa a la pantalla de Inicio de Sesión.
 Para cualquier duda, contacte al administrador del sistema.
 - Nombre: Paola Chacin
 - Correo: pao28chacin@gmail.com
-- Teléfono: 0424-8321324/0412-0867938
+- Teléfono: 0424-8321324 / 0412-0867938
 """
 
 def show_full_manual_in_frame(parent_frame):
@@ -188,11 +193,21 @@ def show_full_manual_in_frame(parent_frame):
     
     text_widget.insert("1.0", FULL_MANUAL_TEXT)
     text_widget.config(state="disabled")
-
+    
     def export_action():
         help_controller.handle_export_manual_as_pdf(FULL_MANUAL_TEXT)
     
     ttk.Button(bottom_frame, text="Exportar en PDF", command=export_action, style='Action.TButton').pack(side='right')
+
+    #def preview_action():
+     #   help_controller.handle_preview_manual(FULL_MANUAL_TEXT)
+    
+    ##  help_controller.handle_save_manual(FULL_MANUAL_TEXT)
+    
+    #save_button = ttk.Button(bottom_frame, text="Guardar PDF", command=save_action, style='Search.TButton')
+    #save_button.pack(side='right')
+    #preview_button = ttk.Button(bottom_frame, text="Visualizar PDF", command=preview_action, style='Action.TButton')
+    #preview_button.pack(side='right', padx=(0, 10))
 
 def show_help_manual(main_window):
     """Crea y muestra una ventana Toplevel con el manual de usuario."""

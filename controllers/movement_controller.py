@@ -24,7 +24,13 @@ def handle_register_entry(data):
         return False
         
     if not validation.is_valid_lote_tag(data['tag_lote']):
-        messagebox.showerror("Formato Incorrecto", "El Tag del Lote contiene caracteres inválidos.\nUse solo letras, números y guiones.")
+        messagebox.showerror("Formato de Tag Inválido", 
+                             "El formato del Tag del Lote es incorrecto.\n\n"
+                             "Debe ser AAPPXXXX, donde:\n"
+                             "  AA: Dos dígitos del año (ej. 25)\n"
+                             "  PP: Dos iniciales del productor en mayúsculas (ej. JR)\n"
+                             "  XXXX: Número secuencial del lote (ej. 086)\n\n"
+                             "Ejemplo Completo: 25JR086")
         return False
         
     try:

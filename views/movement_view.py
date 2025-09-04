@@ -32,11 +32,11 @@ def show_register_movement_form(parent_frame, user_id):
     
     # --- WIDGETS PARA 'ENTRADA' ---
     products_list = movement_controller.handle_get_products_for_selection() or []
-    product_map = {f"{p['id_producto']} - {p['nombre']}": p['id_producto'] for p in products_list}
+    product_map = {f"{p['codigo_producto']} - {p['nombre']}": p['id_producto'] for p in products_list}
     ttk.Label(entry_frame, text="Producto a Ingresar*", style='ContentLabel.TLabel').pack(anchor="w")
     entry_product_combo = ttk.Combobox(entry_frame, values=list(product_map.keys()), state="readonly")
     entry_product_combo.pack(fill="x", pady=(2, 5))
-    ttk.Label(entry_frame, text="Tag del Nuevo Lote*", style='ContentLabel.TLabel').pack(anchor="w")
+    ttk.Label(entry_frame, text="Tag del Nuevo Lote* (ej. 25JR086)", style='ContentLabel.TLabel').pack(anchor="w")
     entry_tag_entry = ttk.Entry(entry_frame)
     entry_tag_entry.pack(fill="x", pady=(2, 5))
     ttk.Label(entry_frame, text="Cantidad Inicial*", style='ContentLabel.TLabel').pack(anchor="w")

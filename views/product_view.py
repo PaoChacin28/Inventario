@@ -403,7 +403,7 @@ def show_all_products_list(parent_frame):
     ttk.Button(bottom_frame, text="Añadir Producto", command=on_add_record, style='Action.TButton').pack(side='left', padx=(0, 5))
     ttk.Button(bottom_frame, text="Ver Lotes", command=on_view_lots, style='Search.TButton').pack(side='left', padx=5)
     ttk.Button(bottom_frame, text="Ver Proveedores", command=on_view_providers, style='Search.TButton').pack(side='left', padx=5)
-    ttk.Button(bottom_frame, text="Desactivar Seleccionado", command=on_deactivate_record, style='Delete.TButton').pack(side='right')
+    ttk.Button(bottom_frame, text="Desincorporar Seleccionado", command=on_deactivate_record, style='Delete.TButton').pack(side='right')
     ttk.Button(bottom_frame, text="Editar Seleccionado", command=on_edit_record, style='Action.TButton').pack(side='right', padx=5)
     
     _load_initial_data()

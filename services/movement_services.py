@@ -10,7 +10,7 @@ def get_products_for_selection():
     if not db: return []
     cursor = db.cursor(dictionary=True)
     try:
-        cursor.execute("SELECT id_producto, nombre FROM producto ORDER BY nombre ASC")
+        cursor.execute("SELECT id_producto, codigo_producto, nombre FROM producto WHERE estado = 'Activo' ORDER BY nombre ASC")
         return cursor.fetchall()
     finally:
         if db.is_connected():

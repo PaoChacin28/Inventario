@@ -11,10 +11,6 @@ def clear_frame(frame):
     for widget in frame.winfo_children():
         widget.destroy()
 
-# En views/report_view.py
-
-# ... (tus otras importaciones no cambian) ...
-
 def show_generate_report_form(parent_frame, user_id):
     clear_frame(parent_frame)
     
@@ -113,6 +109,7 @@ def show_generate_report_form(parent_frame, user_id):
         for i in tree.get_children(): tree.delete(i)
         tree['columns'] = ()
         export_button.config(state="disabled")
+        save_button.config(state="disabled")
 
         if report_data:
             report_headers = {k: k.replace('_', ' ').title() for k in report_data[0].keys()}
@@ -137,8 +134,17 @@ def show_generate_report_form(parent_frame, user_id):
                 tree.insert("", "end", values=values)
 
             export_button.config(state="normal")
+            save_button.config(state="normal")
         elif report_data is not None:
              messagebox.showinfo("Reporte Vacío", "La consulta no arrojó resultados.")
+    
+    def preview_action():
+        if not report_data: messagebox.showwarning("Sin Datos", "Primero debe generar un reporte."); return
+        report_controller.handle_preview_report(report_data, report_headers, type_combobox.get())
+
+    def save_action():
+        if not report_data: messagebox.showwarning("Sin Datos", "Primero debe generar un reporte."); return
+        report_controller.handle_save_report(report_data, report_headers, type_combobox.get())
 
     def export_action():
         # ... (Tu lógica de exportar no cambia)
@@ -149,6 +155,8 @@ def show_generate_report_form(parent_frame, user_id):
 
     # --- Botones ---
     ttk.Button(field_container, text="Generar Reporte", command=generate_report_action, style='Action.TButton').pack(pady=15)
-    export_button = ttk.Button(action_frame, text="Exportar PDF", command=export_action, state="disabled", style='Action.TButton')
-    export_button.pack(side='right')
+    save_button = ttk.Button(action_frame, text="Guardar PDF", command=save_action, state="disabled", style='Search.TButton')
+    save_button.pack(side='right')
+    export_button = ttk.Button(action_frame, text="Visualizar PDF", command=preview_action, state="disabled", style='Action.TButton')
+    export_button.pack(side='right', padx=10)
     on_report_type_change(None)

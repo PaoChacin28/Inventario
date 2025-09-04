@@ -12,7 +12,7 @@ content_frame = None
 def _clear_frame(frame):
     for widget in frame.winfo_children(): widget.destroy()
 
-def create_main_menu_window(rol, user_id, login_window_ref, login_action_ref):
+def create_main_menu_window(rol, user_id, login_window_ref, login_action_ref, clear_login_fields_ref):
     global content_frame
     
     main_window = tk.Toplevel(login_window_ref)
@@ -27,22 +27,18 @@ def create_main_menu_window(rol, user_id, login_window_ref, login_action_ref):
     sidebar_frame.grid_propagate(False)
 
     # --- NUEVA ESTRUCTURA DE LAYOUT CON GRID ---
-    # 1. Creamos un frame contenedor principal para el área derecha
     main_area = ttk.Frame(main_window, style='MainContent.TFrame')
     main_area.grid(row=0, column=1, sticky="nsew", padx=10, pady=10)
     
-    # 2. Configuramos la grilla interna del main_area
-    main_area.rowconfigure(1, weight=1) # Hacemos que la fila del contenido (fila 1) se expanda
-    main_area.columnconfigure(0, weight=1) # Hacemos que la única columna se expanda
+    main_area.rowconfigure(1, weight=1)
+    main_area.columnconfigure(0, weight=1)
 
-    # 3. Creamos el frame para el header (estático)
     header_frame = ttk.Frame(main_area, style='MainContent.TFrame', height=60)
-    header_frame.grid(row=0, column=0, sticky="ew") # Colocado en la fila 0, se estira horizontalmente
+    header_frame.grid(row=0, column=0, sticky="ew")
     header_frame.grid_propagate(False)
 
-    # 4. Creamos el frame para el contenido (dinámico)
     content_frame = ttk.Frame(main_area, style='MainContent.TFrame')
-    content_frame.grid(row=1, column=0, sticky="nsew") # Colocado en la fila 1, se expande en todas direcciones
+    content_frame.grid(row=1, column=0, sticky="nsew")
     
     # --- LÓGICA DEL LOGO PEQUEÑO ---
     try:
@@ -52,20 +48,20 @@ def create_main_menu_window(rol, user_id, login_window_ref, login_action_ref):
         logo_tk = ImageTk.PhotoImage(logo_redimensionado)
         logo_label = ttk.Label(header_frame, image=logo_tk, style='ContentBackground.TLabel')
         logo_label.image = logo_tk
-        logo_label.pack(side='right', padx=10) # pack dentro del header sigue siendo la mejor opción
+        logo_label.pack(side='right', padx=10)
     except Exception as e:
         print(f"No se pudo cargar el logo para el header: {e}")
 
     # --- FUNCIONES DE CONTROL DEL HEADER ---
     def show_header():
-        header_frame.grid() # Muestra el header
+        header_frame.grid()
 
     def hide_header():
-        header_frame.grid_remove() # Oculta el header sin destruir su espacio
+        header_frame.grid_remove()
 
     # --- FUNCIONES DE NAVEGACIÓN ---
     def _show_welcome_screen(current_rol):
-        hide_header() # Ocultamos el header en la pantalla de inicio
+        hide_header()
         _clear_frame(content_frame)
         try:
             img_path = resource_path("images/logo_empresa.png")
@@ -78,7 +74,6 @@ def create_main_menu_window(rol, user_id, login_window_ref, login_action_ref):
         ttk.Label(content_frame, text=f"Bienvenido(a), {current_rol}!", style='ContentTitle.TLabel').pack(pady=10)
         ttk.Label(content_frame, text="Selecciona una opción del menú lateral para comenzar.", style='ContentLabel.TLabel').pack(pady=20)
 
-    # Creamos funciones "envoltorio" que primero gestionan el header
     def navigate_to_products():
         show_header()
         product_view.show_all_products_list(content_frame)
@@ -99,7 +94,7 @@ def create_main_menu_window(rol, user_id, login_window_ref, login_action_ref):
         show_header()
         report_view.show_generate_report_form(content_frame, user_id)
 
-    # --- BOTONES DEL MENÚ (AHORA LLAMAN A LAS FUNCIONES DE NAVEGACIÓN) ---
+    # --- BOTONES DEL MENÚ ---
     def add_menu_button(text, command):
         ttk.Button(sidebar_frame, text=text, command=command, style='Sidebar.TButton').pack(fill="x", pady=5, padx=5)
     
@@ -113,16 +108,24 @@ def create_main_menu_window(rol, user_id, login_window_ref, login_action_ref):
         add_menu_button("Reportes", navigate_to_reports)
         add_menu_button("Manual de Usuario", lambda: help_view.show_full_manual_in_frame(content_frame))
 
+    # NOTA: Asegúrate de que tu help_view tenga una función show_help_manual (o renómbrala a show_help_popup)
     add_menu_button("Ayuda", lambda: help_view.show_help_manual(main_window))
     
-    
+    # --- CAMBIO 2: LÓGICA DE CIERRE DE SESIÓN ACTUALIZADA ---
     def logout_action():
         main_window.destroy()
+        
+        # Primero, limpiamos los campos de la ventana de login.
+        clear_login_fields_ref()
+        
+        # Luego, mostramos la ventana ya limpia.
         login_window_ref.deiconify()
+        
+        # Y finalmente, re-vinculamos la tecla Enter.
         login_window_ref.bind('<Return>', login_action_ref)
     
     add_menu_button("Cerrar Sesión", logout_action)
 
     # --- Estado Inicial ---
-    _show_welcome_screen(rol) # Por defecto, empezamos en inicio con el header oculto
+    _show_welcome_screen(rol)
     main_window.protocol("WM_DELETE_WINDOW", logout_action)

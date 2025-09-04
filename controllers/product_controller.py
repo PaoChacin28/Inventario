@@ -23,7 +23,7 @@ def handle_add_product(data):
     # --- NUEVA VALIDACIÓN DE FORMATO ---
     if not validation.is_valid_product_code(data['codigo_producto']):
         messagebox.showerror("Formato Incorrecto", "El formato del Código de Producto es inválido.\nEjemplo: CAR-001")
-        return None
+        return (False, None)
     # ------------------------------------
     
     # El servicio 'add_product' devuelve (True, nuevo_id)
@@ -78,6 +78,22 @@ def handle_deactivate_product(code):
 
 def handle_get_providers_for_product(product_id):
     return product_service.get_providers_for_product(product_id)
+
+def handle_associate_provider(product_id, provider_id):
+    """
+    Maneja la asociación de un proveedor a un producto.
+    Es 'silenciosa' para ser usada en bucles. Devuelve True/False.
+    """
+    if not product_id or not provider_id:
+        return False
+        
+    success, message = product_service.associate_provider_to_product(product_id, provider_id)
+    
+    # Solo mostramos un error si no es un error de "duplicado", que es esperado.
+    if not success and "ya está asociado" not in message:
+        messagebox.showerror("Error de Asociación", message)
+        
+    return success
 
 def handle_update_product_and_associations(product_id, product_data, final_provider_ids):
     """
